@@ -64,15 +64,17 @@ internal static partial class Program
             Render(dashboard, renderFolder, "shutter-decrease");
         foreach (var (count, zone) in new[] { (32_000u, "Low usage"), (87_000u, "Elevated usage"), (165_000u, "High usage") })
         {
-            window.ShowExample(count);
-            Check(Label(window, "ConnectionText") == "Example reading", "Sample is explicitly identified");
-            Check(Label(window, "ZoneText") == zone && Label(window, "CountText") == count.ToString("N0"), "Sample renders the correct status");
-            Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed, "Sample hides USB history");
+            window.ShowUsbReading(ExampleReading(count), null);
+            Check(Label(window, "ZoneText") == zone && Label(window, "CountText") == count.ToString("N0"), "Dashboard renders the correct usage status");
+            Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed, "A reading without a USB counter property hides history");
             if (renderFolder is not null)
                 Render(dashboard, renderFolder, zone.Split(' ')[0].ToLowerInvariant());
         }
         CheckLanguages(window, preferencePath, renderFolder);
     }
+
+    private static CameraReading ExampleReading(uint count) =>
+        new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
 
     private static void CheckLanguages(MainWindow window, string preferencePath, string? renderFolder)
     {
@@ -85,7 +87,7 @@ internal static partial class Program
 
         foreach (LanguageOption option in picker.Items)
         {
-            window.ShowExample(87_000);
+            window.ShowUsbReading(ExampleReading(87_000), null);
             var catalog = Languages.Catalog(option);
             Check(original.Keys.ToHashSet().SetEquals(catalog.Keys), $"{option.Code} has all messages");
             foreach (var (key, message) in catalog)
@@ -99,8 +101,8 @@ internal static partial class Program
             var direction = option.Code is "ar" or "arz" or "ur" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             Check(window.FlowDirection == direction, $"{option.Code} has the expected layout direction");
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
-            Check(Label(window, "ConnectionText") == catalog["ExampleReading"] &&
-                Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the example");
+            Check(Label(window, "ConnectionText") == catalog["UsbConnected"] &&
+                Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the USB reading");
             Check(Label(window, "CountText") == 87_000.ToString("N0", option.Culture), "Shutter count uses the selected language's number format");
             if (renderFolder is not null)
                 Render((Grid)window.FindName("Dashboard"), renderFolder, $"language-{option.Code}", 786);

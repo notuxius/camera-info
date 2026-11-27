@@ -2,12 +2,19 @@
 
 A Windows utility for reading Canon cameras over USB and comparing mechanical shutter usage with Canon’s published durability ratings.
 
+## Download
+
+Download [Camera Info for Windows x64](https://github.com/notuxius/camera-info/releases/latest/download/CameraInfo-win-x64.exe). The EXE requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
+
+## Example dashboard
+
+![Camera Info dashboard showing 87,000 mechanical shutter actuations on a Canon EOS 5D Mark III](docs/dashboard-example.png)
+
 ## Use the app
 
 1. Connect the camera to your PC with a USB data cable and switch it on.
 2. If the camera asks for a USB mode, choose photo import, remote control, or PC connection.
 3. Open Camera Info and select **Scan for cameras**. Close Canon EOS Utility if it is holding the connection.
-4. Select **View example** to explore the dashboard without a camera.
 
 Use the **Language** menu at the top of the window to switch the interface. Camera Info remembers your selection the next time you open it.
 
@@ -43,10 +50,10 @@ These thresholds are app-defined. The rating measures tested shutter durability 
 
 ## Build
 
-Use the .NET 10 SDK to build on Windows. The Windows x64 release bundles the .NET 10 Desktop Runtime.
+Use the .NET 10 SDK to build on Windows.
 
 ```powershell
-dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o dist/win-x64
+dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o dist/win-x64
 ```
 
 Run the headless checks with `dotnet run --project tests/CameraInfo.Checks.csproj -c Release`. Pass an output directory after `--` to also render dashboard screenshots without showing a window.

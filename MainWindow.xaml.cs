@@ -16,7 +16,6 @@ public partial class MainWindow : Window
     private ShutterCount? _manual;
     private double? _ratio;
     private bool _busy;
-    private bool _example;
     private bool _updatingList;
     private string _connectionKey = "NoCameraDetected";
     private (string Key, string? Argument)? _helpOverride;
@@ -84,7 +83,6 @@ public partial class MainWindow : Window
         SetBusy(true);
         DevicePicker.Visibility = Visibility.Collapsed;
         _reading = null;
-        _example = false;
         ResetManual();
         ShowReading();
         SetConnection("Scanning");
@@ -100,7 +98,7 @@ public partial class MainWindow : Window
             DevicePicker.Visibility = cameras.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
 
             if (camera is null)
-                SetConnection("NoCanonDetected");
+                SetConnection("NoCameraDetected");
             else
                 await ReadAsync(camera);
         }
@@ -128,7 +126,6 @@ public partial class MainWindow : Window
 
     private async Task ReadAsync(CameraDevice device)
     {
-        _example = false;
         _reading = null;
         ResetManual();
         ShowReading();
@@ -165,32 +162,10 @@ public partial class MainWindow : Window
 
     internal void ShowUsbReading(CameraReading reading, ShutterComparison? comparison)
     {
-        _example = false;
         _reading = reading;
         _shutterComparison = comparison;
         ShowReading();
         SetConnection("UsbConnected", "Green");
-    }
-
-    private void OnExample(object sender, RoutedEventArgs e)
-    {
-        if (_example)
-        {
-            OnScan(sender, e);
-            return;
-        }
-
-        DevicePicker.Visibility = Visibility.Collapsed;
-        ShowExample(87_000);
-    }
-
-    internal void ShowExample(uint count)
-    {
-        _example = true;
-        _reading = new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
-        ResetManual();
-        ShowReading();
-        SetConnection("ExampleReading", "Yellow");
     }
 
     private void ShowReading()
@@ -210,13 +185,12 @@ public partial class MainWindow : Window
             var model => model
         };
         MakerValue.Text = _reading?.Maker ?? "—";
-        SerialValue.Text = _example ? T("ExampleSerial") : _reading?.Serial ?? "—";
+        SerialValue.Text = _reading?.Serial ?? "—";
         FirmwareValue.Text = _reading?.Firmware ?? "—";
         BatteryValue.Text = _reading?.Battery is uint battery ? FormatLocalizedPercent(battery / 100m, "P0") : "—";
-        SourceValue.Text = _reading is null ? "—" : _example ? T("SampleData") : _manual is not null ? T("ManualCount") : "USB";
+        SourceValue.Text = _reading is null ? "—" : _manual is not null ? T("ManualCount") : "USB";
         RatingLink.NavigateUri = rating is null ? null : new Uri(rating.Source);
         RatingLinkRow.Visibility = rating is null ? Visibility.Collapsed : Visibility.Visible;
-        ExampleButton.Content = T(_example ? "ExitExample" : "ViewExample");
 
         CountText.Text = count is { } value ? FormatCount(value.Value, value.IsUpperBound) : "—";
         ReadingLabel.Text = T(count?.Kind == CountKind.Mechanical ? "MechanicalCount" : "ReportedCount");
@@ -259,19 +233,18 @@ public partial class MainWindow : Window
         }
         ShowShutterHistory();
 
-        bool allowManual = !_example && rating is not null && _reading?.Count is not { Kind: CountKind.Mechanical, HasRange: false };
+        bool allowManual = rating is not null && _reading?.Count is not { Kind: CountKind.Mechanical, HasRange: false };
         ManualPanel.Visibility = allowManual ? Visibility.Visible : Visibility.Collapsed;
         ClearCountButton.Visibility = _manual is null ? Visibility.Collapsed : Visibility.Visible;
-        HelpTitle.Text = T(_example ? "ExampleTitle" : _reading is null ? "ConnectTitle"
+        HelpTitle.Text = T(_reading is null ? "ConnectTitle"
             : allowManual ? "ManualTitle" : "RefreshTitle");
-        HelpText.Text = _helpOverride is { } help ? T(help.Key, help.Argument) : T(_example
-            ? "ExampleHelp"
-            : _reading is null ? "ConnectHelp" : allowManual ? "ManualHelp" : "RefreshHelp");
+        HelpText.Text = _helpOverride is { } help ? T(help.Key, help.Argument)
+            : T(_reading is null ? "ConnectHelp" : allowManual ? "ManualHelp" : "RefreshHelp");
     }
 
     private void ShowShutterHistory()
     {
-        if (_example || _reading?.Count is not { UsbProperty: not null } count)
+        if (_reading?.Count is not { UsbProperty: not null } count)
         {
             ShutterHistoryText.Visibility = Visibility.Collapsed;
             return;
@@ -352,7 +325,6 @@ public partial class MainWindow : Window
     {
         _busy = busy;
         ScanButton.IsEnabled = !busy;
-        ExampleButton.IsEnabled = !busy;
         DevicePicker.IsEnabled = !busy;
     }
 

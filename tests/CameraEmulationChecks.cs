@@ -164,15 +164,20 @@ internal static partial class Program
 
         RunScanCheck(window, async () =>
         {
-            var example = (Button)window.FindName("ExampleButton");
-            example.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Check(Label(window, "ConnectionText") == "Example reading" && Label(window, "CountText") == "87,000",
-                "The dashboard has an example reading before the empty scan");
-
+            window.ShowUsbReading(ExampleReading(87_000), null);
             await ClickScanAsync(window);
-            Check(manager.Scans == 1 && (string)example.Content == "View example",
-                "The scan runs discovery and exits the example");
+            Check(manager.Scans == 1, "The scan runs discovery");
             CheckNoCameraFound(window);
+
+            var picker = (ComboBox)window.FindName("LanguagePicker");
+            var original = picker.SelectedItem;
+            foreach (LanguageOption option in picker.Items)
+            {
+                picker.SelectedItem = option;
+                Check(Label(window, "ConnectionText") == Languages.Catalog(option)["NoCameraDetected"],
+                    $"An empty scan uses the generic message in {option.Code}");
+            }
+            picker.SelectedItem = original;
         });
         Console.WriteLine("End-to-end scan with no camera found passed.");
     }
@@ -273,7 +278,7 @@ internal static partial class Program
     {
         var picker = (ComboBox)window.FindName("DevicePicker");
         Check(picker.Items.Count == 0 && picker.SelectedItem is null && picker.Visibility == Visibility.Collapsed &&
-            Label(window, "ConnectionText") == "No Canon camera detected" &&
+            Label(window, "ConnectionText") == "No camera detected" &&
             Label(window, "HelpText") == "Use a USB data cable and turn the camera on. If prompted, choose photo transfer or PC connection mode.",
             "An empty discovery clears the device picker and shows connection guidance");
         CheckClearedScanDashboard(window);
@@ -287,8 +292,8 @@ internal static partial class Program
             "The dashboard clears the prior metadata, count and usage");
         Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed &&
             ((StackPanel)window.FindName("ManualPanel")).Visibility == Visibility.Collapsed &&
-            ((Button)window.FindName("ExampleButton")).IsEnabled,
-            "The dashboard hides history and manual entry and re-enables the example");
+            ((Button)window.FindName("ScanButton")).IsEnabled,
+            "The dashboard hides history and manual entry and re-enables scanning");
     }
 
     private static void RunScanCheck(MainWindow window, Func<Task> checkScan)

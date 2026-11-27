@@ -60,7 +60,7 @@
                             <TextBlock x:Name="VersionText" Foreground="{StaticResource Secondary}" Margin="0,0,0,6" />
                             <TextBlock>
                                 <Hyperlink x:Name="SupportedCamerasLink" Foreground="{StaticResource Accent}"
-                                           NavigateUri="https://github.com/notuxius/camera-info#canon-usb-support" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource SupportedCameras}" /></Hyperlink>
+                                           NavigateUri="https://github.com/notuxius/camera-info#brand-support-backlog" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource SupportedCameras}" /></Hyperlink>
                             </TextBlock>
                         </StackPanel>
                     </Border>

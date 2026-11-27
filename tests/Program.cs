@@ -87,7 +87,7 @@ internal static partial class Program
         Check(panel.Visibility == Visibility.Collapsed, "About starts closed");
         button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(panel.Visibility == Visibility.Visible && Label(window, "VersionText") == $"Version {version}" &&
-            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-info#canon-usb-support",
+            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-info#brand-support-backlog",
             "About shows the running app version and links to supported cameras");
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "about", 786);

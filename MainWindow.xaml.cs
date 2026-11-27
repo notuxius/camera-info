@@ -11,6 +11,8 @@ namespace CameraInfo;
 
 public partial class MainWindow : Window
 {
+    private static readonly string AppVersion = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
+
     private CameraReading? _reading;
     private ShutterComparison? _shutterComparison;
     private ShutterCount? _manual;
@@ -62,6 +64,7 @@ public partial class MainWindow : Window
         Language = XmlLanguage.GetLanguage(option.Culture.IetfLanguageTag);
         FlowDirection = option.Culture.TextInfo.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
         ConnectionText.Text = T(_connectionKey);
+        VersionText.Text = T("Version", AppVersion);
         if (ManualError.Visibility == Visibility.Visible)
             ManualError.Text = T("InvalidCount");
         ShowReading();
@@ -71,6 +74,9 @@ public partial class MainWindow : Window
         values.Length == 0 ? _messages[key] : string.Format(_language.Culture, _messages[key], values);
 
     private async void OnLoaded(object sender, RoutedEventArgs e) => await ScanAsync();
+
+    private void OnAbout(object sender, RoutedEventArgs e) =>
+        AboutPanel.Visibility = AboutPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
     private async void OnScan(object sender, RoutedEventArgs e) => await ScanAsync();
 
@@ -350,7 +356,7 @@ public partial class MainWindow : Window
             Canvas.SetLeft(Marker, Math.Clamp(ratio, 0, 1) * Math.Max(0, Scale.ActualWidth - Marker.Width));
     }
 
-    private void OnOpenRating(object sender, RequestNavigateEventArgs e)
+    private void OnOpenLink(object sender, RequestNavigateEventArgs e)
     {
         e.Handled = true;
         try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }

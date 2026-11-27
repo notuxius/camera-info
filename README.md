@@ -18,6 +18,8 @@ Download [Camera Info for Windows x64](https://github.com/notuxius/camera-info/r
 
 Use the **Language** menu at the top of the window to switch the interface. Camera Info remembers your selection the next time you open it.
 
+Select **About** to see the installed version and open the supported camera list.
+
 Camera Info displays the model, firmware, serial number, battery charge, and shutter count when the camera supplies them. USB discovery works through Windows Portable Devices. The app displays uncertain counters as reported and leaves the usage status gray. When the camera supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a Canon rating is available.
 
 The first USB scan with a serial number saves a baseline on this PC. Later scans compare the same camera model, serial number, and Canon counter. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored under `%LOCALAPPDATA%\Camera Info\Shutter History`.

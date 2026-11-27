@@ -17,6 +17,10 @@
                 </Grid.RowDefinitions>
 
                 <Grid Margin="0,0,0,24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
                         <ColumnDefinition Width="Auto" />
@@ -44,9 +48,22 @@
                                       SelectionChanged="OnLanguageChanged"
                                       AutomationProperties.LabeledBy="{Binding ElementName=LanguageLabel}" />
                         </StackPanel>
-                        <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}"
-                                HorizontalAlignment="Right" Click="OnScan" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="AboutButton" Content="{DynamicResource About}" Margin="0,0,9,0" Click="OnAbout" />
+                            <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}" Click="OnScan" />
+                        </StackPanel>
                     </StackPanel>
+                    <Border x:Name="AboutPanel" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Visibility="Collapsed"
+                            Background="{StaticResource Card}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                            CornerRadius="{StaticResource ButtonCornerRadius}" Margin="0,8,0,0" Padding="15,10">
+                        <StackPanel>
+                            <TextBlock x:Name="VersionText" Foreground="{StaticResource Secondary}" Margin="0,0,0,6" />
+                            <TextBlock>
+                                <Hyperlink x:Name="SupportedCamerasLink" Foreground="{StaticResource Accent}"
+                                           NavigateUri="https://github.com/notuxius/camera-info#canon-usb-support" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource SupportedCameras}" /></Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <Border Grid.Row="1" Background="{StaticResource Inset}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
@@ -200,7 +217,7 @@
                                 <TextBlock x:Name="SourceValue" Grid.Row="4" Grid.Column="1" Text="—" Style="{StaticResource DetailValue}" TextWrapping="Wrap" />
                             </Grid>
                             <TextBlock x:Name="RatingLinkRow" Margin="0,10,0,0" Visibility="Collapsed">
-                                <Hyperlink x:Name="RatingLink" Foreground="{StaticResource Accent}" RequestNavigate="OnOpenRating"><Run Text="{DynamicResource RatingSource}" /></Hyperlink>
+                                <Hyperlink x:Name="RatingLink" Foreground="{StaticResource Accent}" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource RatingSource}" /></Hyperlink>
                             </TextBlock>
                         </StackPanel>
                     </Border>

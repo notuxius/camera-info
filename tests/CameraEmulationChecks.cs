@@ -208,7 +208,7 @@ internal static partial class Program
             Check(manager.Scans == 2 && Equals(picker.SelectedItem, camera) && manager.Devices.Length == 0 && reads.Count == 1,
                 "Discovery finds the camera before it disconnects during the open attempt");
             Check(Label(window, "ConnectionText") == "Camera could not be opened" &&
-                Label(window, "HelpText") == "Wake the camera, close Canon EOS Utility or other camera apps, then scan again.",
+                Label(window, "HelpText") == "Wake the camera, close other camera apps, then scan again.",
                 "The dashboard shows opening failure and retry guidance");
             CheckClearedScanDashboard(window);
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CameraInfo;
@@ -54,6 +55,7 @@ internal static partial class Program
         Check(Label(window, "CountText") == "—", "Disconnected window has no count");
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "disconnected");
+        CheckAbout(window, dashboard, renderFolder);
         string testDirectory = Path.GetDirectoryName(preferencePath)!;
         CheckEmulatedScan(preferencePath, Path.Combine(testDirectory, "emulated-history"));
         CheckScanWithoutCamera(preferencePath, Path.Combine(testDirectory, "empty-scan-history"));
@@ -76,11 +78,31 @@ internal static partial class Program
     private static CameraReading ExampleReading(uint count) =>
         new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
 
+    private static void CheckAbout(MainWindow window, Grid dashboard, string? renderFolder)
+    {
+        var button = (Button)window.FindName("AboutButton");
+        var panel = (Border)window.FindName("AboutPanel");
+        var link = (Hyperlink)window.FindName("SupportedCamerasLink");
+        string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
+        Check(panel.Visibility == Visibility.Collapsed, "About starts closed");
+        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(panel.Visibility == Visibility.Visible && Label(window, "VersionText") == $"Version {version}" &&
+            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-info#canon-usb-support",
+            "About shows the running app version and links to supported cameras");
+        if (renderFolder is not null)
+            Render(dashboard, renderFolder, "about", 786);
+        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(panel.Visibility == Visibility.Collapsed, "About closes when selected again");
+    }
+
     private static void CheckLanguages(MainWindow window, string preferencePath, string? renderFolder)
     {
         var picker = (ComboBox)window.FindName("LanguagePicker");
         var english = (LanguageOption)picker.SelectedItem;
         var original = Languages.Catalog(english);
+        var aboutButton = (Button)window.FindName("AboutButton");
+        var supportedCameras = (Run)((Hyperlink)window.FindName("SupportedCamerasLink")).Inlines.FirstInline;
+        string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
         Check(english.Code == "en", "No saved language defaults to English");
         Check(string.Join(" ", picker.Items.Cast<LanguageOption>().Select(option => option.Code)) ==
             "ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "Picker matches Relf's 16 languages");
@@ -101,6 +123,9 @@ internal static partial class Program
             var direction = option.Code is "ar" or "arz" or "ur" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             Check(window.FlowDirection == direction, $"{option.Code} has the expected layout direction");
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
+            Check((string)aboutButton.Content == catalog["About"] && supportedCameras.Text == catalog["SupportedCameras"] &&
+                Label(window, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
+                $"About updates to {option.Code}");
             Check(Label(window, "ConnectionText") == catalog["UsbConnected"] &&
                 Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the USB reading");
             Check(Label(window, "CountText") == 87_000.ToString("N0", option.Culture), "Shutter count uses the selected language's number format");

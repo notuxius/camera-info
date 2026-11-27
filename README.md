@@ -43,10 +43,10 @@ These thresholds are app-defined. The rating measures tested shutter durability 
 
 ## Build
 
-Use the .NET 10 SDK on Windows. The x64 executable requires the .NET 10 Desktop Runtime.
+Use the .NET 10 SDK to build on Windows. The Windows x64 release bundles the .NET 10 Desktop Runtime.
 
 ```powershell
-dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:EnableSingleFileAnalyzer=false -p:DebugType=None -o dist/win-x64
+dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o dist/win-x64
 ```
 
 Run the headless checks with `dotnet run --project tests/CameraInfo.Checks.csproj -c Release`. Pass an output directory after `--` to also render dashboard screenshots without showing a window.

@@ -119,8 +119,9 @@ jobs:
         env:
           PACKAGE_FILE: CameraInspector-${{ matrix.platform }}.exe
         run: |
-          $packages = @(Get-ChildItem src-tauri/target/release/bundle/nsis -Filter '*.exe')
-          if ($packages.Count -ne 1) { throw 'Expected one installer.' }
+          $version = (Get-Content -LiteralPath src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $packages = @(Get-ChildItem src-tauri/target/release/bundle/nsis -File -Filter "*_${version}_*-setup.exe")
+          if ($packages.Count -ne 1) { throw "Expected one installer for version $version." }
           $location = Join-Path $env:RUNNER_TEMP 'Camera Inspector smoke'
           $installer = Start-Process -FilePath $packages[0].FullName -ArgumentList "/S /D=$location" -WindowStyle Hidden -PassThru
           if (!$installer.WaitForExit(60000)) { $installer.Kill(); throw 'Installer timed out.' }
@@ -150,7 +151,8 @@ jobs:
           MACOS_SIGNING_OUTCOME: ${{ steps.signed_macos.outcome }}
         run: |
           shopt -s nullglob
-          images=(src-tauri/target/release/bundle/dmg/*.dmg)
+          version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          images=(src-tauri/target/release/bundle/dmg/*_"$version"_*.dmg)
           test "${#images[@]}" -eq 1
           volume="$RUNNER_TEMP/camera-inspector-volume"
           hdiutil attach -nobrowse -readonly -mountpoint "$volume" "${images[0]}"

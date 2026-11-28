@@ -11,13 +11,14 @@
 <body>
   <main class="dashboard">
     <header class="connection">
-      <div class="status" role="status"><span class="dot" aria-hidden="true"></span><span id="connection"></span></div>
+      <div class="status" role="status"><span class="dot" aria-hidden="true"></span><span id="connection" class="status-message"></span></div>
       <nav class="buttons" aria-label="Camera Inspector">
-        <button id="scan" class="primary" data-tr="Scan">Scan for cameras</button>
+        <button id="scan" class="primary" data-tr="Scan">Scan over USB</button>
         <button id="wifi" data-tr="ScanWifi">Scan over Wi-Fi</button>
         <button id="photo" data-tr="OpenPhoto">Open original photo</button>
         <button id="settings" data-tr="Settings">Settings</button>
       </nav>
+      <time id="usb-scan-time" class="usb-scan-time muted" hidden></time>
       <label id="picker-row" class="device-picker" hidden>
         <span data-tr="ConnectedCameras">Connected cameras</span>
         <select id="picker"></select>

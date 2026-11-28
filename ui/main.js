@@ -9,7 +9,8 @@ const number = value => new Intl.NumberFormat(locale).format(value);
 const percent = (value, digits = 0) => new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value);
 const swatches = { Low: "success", Elevated: "warning", High: "error" };
 const success = new Set(["UsbConnected", "WifiConnected", "PhotoOpened"]);
-const failure = new Set(["NoCameraDetected", "CameraDisconnected", "OpenFailed", "ScanFailed", "PhotoOpenFailed"]);
+const failure = new Set(["CameraDisconnected", "OpenFailed", "ScanFailed", "PhotoOpenFailed"]);
+const connectionStatuses = ["NoCameraDetected", "Scanning", "UsbCameraNotFound", "ReadingCamera", "OpeningPhoto", ...success, ...failure];
 const languages = {
   ar: ["العربية", "ar-SA"], bn: ["বাংলা", "bn-BD"], zh: ["简体中文", "zh-CN"], arz: ["العربية المصرية", "ar-EG"],
   en: ["English", "en-US"], fr: ["Français", "fr-FR"], de: ["Deutsch", "de-DE"], hi: ["हिन्दी", "hi-IN"],
@@ -26,14 +27,16 @@ let manual = null;
 let devices = [];
 let activeDevice = "";
 let status = "NoCameraDetected";
+let usbCheckedAt = null;
 let helpOverride = null;
 let busy = false;
 let wifiBusy = false;
 
 function t(key, ...args) {
-  return (catalog[key] ?? fallback[key] ?? key).replace(/\{(\d+)(?::(N0|d))?\}/g, (_, i, format) => {
+  return (catalog[key] ?? fallback[key] ?? key).replace(/\{(\d+)(?::(N0|d|T))?\}/g, (_, i, format) => {
     if (format === "N0") return number(args[i]);
     if (format === "d") return new Date(args[i]).toLocaleDateString(locale);
+    if (format === "T") return new Intl.DateTimeFormat(locale, { timeStyle: "medium" }).format(args[i]);
     return String(args[i] ?? "");
   });
 }
@@ -69,12 +72,44 @@ async function setLanguage() {
   el("theme").value = preferences.theme;
   el("scale").setAttribute("aria-label", t("UsageScale"));
   text("version", t("Version", preferences.version));
+  if (!el("manual-error").hidden) text("manual-error", t("InvalidCount"));
   render();
   renderPicker();
+  await fitConnectionBar();
+}
+
+async function fitConnectionBar() {
+  const dashboard = document.querySelector(".dashboard");
+  const measure = dashboard.querySelector(".connection").cloneNode(true);
+  measure.classList.add("connection-measure");
+  measure.inert = true;
+  measure.querySelector(".device-picker").remove();
+  measure.querySelector(".usb-scan-time").remove();
+  for (const item of measure.querySelectorAll("[id]")) item.removeAttribute("id");
+  dashboard.append(measure);
+  const label = measure.querySelector(".status-message");
+  let widest = 0;
+  for (const key of connectionStatuses) {
+    label.textContent = t(key);
+    widest = Math.max(widest, measure.getBoundingClientRect().width);
+  }
+  measure.remove();
+
+  const padding = parseFloat(getComputedStyle(dashboard).getPropertyValue("--wide-padding"));
+  const required = Math.max(820, Math.ceil(widest + 2 * padding + 20));
+  const available = Math.floor(screen.availWidth - 24);
+  const minWidth = available > 0 ? Math.min(required, available) : required;
+  await invoke("fit_window", { minWidth });
 }
 
 function showStatus() {
   text("connection", t(status));
+  const time = el("usb-scan-time");
+  time.hidden = status !== "UsbCameraNotFound" || usbCheckedAt === null;
+  if (!time.hidden) {
+    time.dateTime = usbCheckedAt.toISOString();
+    time.textContent = t("UsbLastChecked", usbCheckedAt);
+  }
   const body = document.documentElement.style;
   const state = success.has(status) ? "success" : failure.has(status) ? "error" : "muted";
   const activeError = report?.reading.deviceErrorCode > 0;
@@ -278,7 +313,9 @@ function setBusy(value) {
 function renderPicker() {
   const display = devices.length > 1 || (devices.length > 0 && !activeDevice);
   visible("picker-row", display);
-  setupSelect(el("picker"), [["", t("ConnectedCameras")], ...devices.map(device => [device.id, device.name ?? t("UnknownCamera")])]);
+  const options = devices.map(device => [device.id, device.name ?? t("UnknownCamera")]);
+  if (!activeDevice) options.unshift(["", t("ConnectedCameras")]);
+  setupSelect(el("picker"), options);
   el("picker").value = activeDevice;
 }
 
@@ -312,8 +349,12 @@ el("scan").addEventListener("click", async () => {
   applyReport(null, "Scanning");
   try {
     devices = await invoke("scan_usb");
-    if (!devices.length) setStatus("NoCameraDetected");
-    else await readDevice((devices.find(device => device.id === previous) ?? devices[0]).id);
+    if (devices.length) {
+      await readDevice((devices.find(device => device.id === previous) ?? devices[0]).id);
+    } else {
+      usbCheckedAt = new Date();
+      setStatus("UsbCameraNotFound");
+    }
   } catch {
     helpOverride = [preferences.platform === "Windows" ? "ScanFailedHelp" : "OpenFailedHelp"];
     setStatus("ScanFailed");

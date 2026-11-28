@@ -87,11 +87,14 @@ h3 { margin: 0; font-size: 1.25rem; }
 p { margin: .45rem 0; }
 .muted { color: var(--muted); }
 .error { color: var(--error); }
-.dashboard { max-width: 1136px; padding: 28px; margin-inline: auto; display: grid; gap: 18px; }
+.dashboard { --wide-padding: 28px; max-width: 1136px; padding: var(--wide-padding); margin-inline: auto; display: grid; gap: 18px; }
 .connection { padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--inset); border: 1px solid var(--border); border-radius: 10px; }
-.status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.status { display: flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.connection-measure { position: fixed; inset: 0 auto auto 0; width: max-content; visibility: hidden; flex-wrap: nowrap; }
+.usb-scan-time { flex-basis: 100%; padding-inline-start: 16px; font-size: .86rem; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--state-color, var(--muted)); flex: none; }
-.buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 8px; }
+.buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 8px; margin-inline-start: auto; }
+.buttons button { white-space: nowrap; }
 .device-picker { width: 100%; display: flex; align-items: center; justify-content: end; gap: 8px; }
 .device-picker select { min-width: 170px; max-width: min(55vw, 320px); }
 .overview { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }

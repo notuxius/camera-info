@@ -17,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}},
 };
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, State, Theme, WebviewWindow, WindowEvent};
+use tauri::{AppHandle, LogicalSize, Manager, PhysicalPosition, PhysicalSize, State, Theme, WebviewWindow, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Clone)]
@@ -219,6 +219,19 @@ fn open_link(url: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn fit_window(window: WebviewWindow, min_width: u32) -> Result<(), String> {
+    let min_width = f64::from(min_width.clamp(540, 1200));
+    window.set_min_size(Some(LogicalSize::new(min_width, 560.0))).map_err(error)?;
+    if !window.is_maximized().map_err(error)? {
+        let size = window.inner_size().map_err(error)?.to_logical::<f64>(window.scale_factor().map_err(error)?);
+        if size.width < min_width {
+            window.set_size(LogicalSize::new(min_width, size.height)).map_err(error)?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn ui_ready(app: AppHandle, window: WebviewWindow, state: State<'_, Inspector>) -> Result<(), String> {
     if state.smoke {
         app.exit(0);
@@ -311,7 +324,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             scan_usb, read_usb, scan_wifi, read_wifi, cancel_wifi, open_photo, catalog, settings,
-            save_language, save_theme, open_link, ui_ready,
+            save_language, save_theme, open_link, fit_window, ui_ready,
         ])
         .run(tauri::generate_context!())
         .expect("Camera Inspector could not start.");

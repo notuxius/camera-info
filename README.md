@@ -23,7 +23,7 @@ Select **Open original photo** and choose a recent, unedited Nikon NEF or JPEG, 
 
 1. Connect the camera to your computer with a USB data cable and switch it on.
 2. If the camera asks for a USB mode, choose photo import, remote control, or PC connection.
-3. Open Camera Inspector and select **Scan for cameras**. Close Canon EOS Utility if it is holding the connection.
+3. Open Camera Inspector and select **Scan over USB**. Close Canon EOS Utility if it is holding the connection. If no USB camera is found, the status shows when the scan finished.
 
 On macOS, allow camera access if prompted. Allow local network access when the app first scans over Wi-Fi.
 

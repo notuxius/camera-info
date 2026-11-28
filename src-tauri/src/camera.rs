@@ -116,7 +116,7 @@ pub fn nikon_model(name: &str) -> Option<String> {
     }
 
     static Z: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(r"^Zs*(?:([1-9][0-9]*)(?:s*(_2C?|_3|IIC|III|II))?|(FC?|R))$").unwrap()
+        regex::Regex::new(r"^Z\s*(?:([1-9][0-9]*)(?:\s*(_2C?|_3|IIC|III|II))?|(FC?|R))$").unwrap()
     });
     let caps = Z.captures(model)?;
     match caps.get(3).map(|body| body.as_str()) {
@@ -141,16 +141,16 @@ const MAKERS: [&str; 10] = [
 ];
 static FAMILIES: LazyLock<RegexSet> = LazyLock::new(|| {
     RegexSet::new([
-        r"(?i)^(?:NIKON (?:DSC )?)?(?:Dd|Zs*(?:d|F[C]?|R)|COOLPIX)",
-        r"(?i)^(?:FUJIFILM )?(?:X-[A-Z]+d|Xd|X HALF|GFX ?d|GFX ETERNA |FinePix )",
+        r"(?i)^(?:NIKON (?:DSC )?)?(?:D\d|Z\s*(?:\d|F[C]?\b|R\b)|COOLPIX\b)",
+        r"(?i)^(?:FUJIFILM )?(?:X-[A-Z]+\d|X\d|X HALF\b|GFX ?\d|GFX ETERNA |FinePix )",
         r"(?i)^(?:SONY )?(?:ILC[AE]-|ILME-|ILX-|DSC-|NEX-|SLT-|ZV-|ALPHA |α)",
-        r"(?i)^(?:PANASONIC )?(?:LUMIX|(?:DC|DMC)-[A-Z]+d)",
-        r"(?i)^(?:OM SYSTEM )?OM-[135](?:|MARK)",
-        r"(?i)^(?:OLYMPUS |OM-D )?(?:E-Md|E-P(?:L|M)?d|PEN-F|TG-d)",
-        r"(?i)^(?:PENTAX )?(?:K-?d|K-?[FPSX]|Optio )",
-        r"(?i)^(?:RICOH GR|(?:RICOH )?(?:GR ?(?:DIGITAL|I|II|III|IV|IIIx)|WG-d))",
-        r"(?i)^(?:LEICA )?(?:SLd?|Qd?|Md+|M EV1|[DV]-LUX)(?:|$)",
-        r"(?i)^(?:HASSELBLAD )?(?:X[12]D|907X|CFV|H[3456]D)",
+        r"(?i)^(?:PANASONIC )?(?:LUMIX\b|(?:DC|DMC)-[A-Z]+\d)",
+        r"(?i)^(?:OM SYSTEM )?OM-[135](?:\b|MARK)",
+        r"(?i)^(?:OLYMPUS |OM-D )?(?:E-M\d|E-P(?:L|M)?\d|PEN-F\b|TG-\d)",
+        r"(?i)^(?:PENTAX )?(?:K-?\d|K-?[FPSX]\b|Optio )",
+        r"(?i)^(?:RICOH GR\b|(?:RICOH )?(?:GR ?(?:DIGITAL|I|II|III|IV|IIIx)\b|WG-\d))",
+        r"(?i)^(?:LEICA )?(?:SL\d?|Q\d?|M\d+|M EV1|[DV]-LUX)(?:\b|$)",
+        r"(?i)^(?:HASSELBLAD )?(?:X[12]D\b|907X\b|CFV\b|H[3456]D\b)",
     ]).unwrap()
 });
 
@@ -178,4 +178,23 @@ pub fn usb_maker(ids: Option<(u16, u16)>, name: &str) -> Option<&'static str> {
 
 pub fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn classifies_cameras_without_requiring_an_explicit_usb_product_id() {
+        for (model, maker) in [
+            ("Nikon Z 6II", "Nikon"), ("Fujifilm X-E5", "Fujifilm"), ("Sony ILCE-7M5", "Sony"),
+            ("Panasonic DC-S5M2", "Panasonic"), ("OM-1 Mark II", "OM System"),
+            ("Olympus E-M1 Mark III", "Olympus"), ("Pentax K-3 Mark III", "Pentax"),
+            ("Ricoh GR III", "Ricoh"), ("Leica M11", "Leica"), ("Hasselblad X2D 100C", "Hasselblad"),
+        ] {
+            assert_eq!(usb_maker(None, model), Some(maker), "{model}");
+        }
+        assert_eq!(usb_maker(None, "Portable music player"), None);
+    }
 }

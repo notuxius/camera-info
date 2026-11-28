@@ -22,7 +22,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="50" Height="50" CornerRadius="12" Background="#25332A" BorderBrush="#395842" BorderThickness="1" Margin="0,0,14,0">
+                        <Border Width="50" Height="50" CornerRadius="12" Background="#1E405A" BorderBrush="{StaticResource Edge}" BorderThickness="1" Margin="0,0,14,0">
                             <Viewbox Width="25" Height="25">
                                 <Canvas Width="32" Height="32">
                                     <Path Data="M 3,12 L 3,5 Q 3,3 5,3 L 12,3 M 20,3 L 27,3 Q 29,3 29,5 L 29,12 M 29,20 L 29,27 Q 29,29 27,29 L 20,29 M 12,29 L 5,29 Q 3,29 3,27 L 3,20"
@@ -55,7 +55,7 @@
                             <TextBlock x:Name="ConnectionText" FontWeight="SemiBold"
                                        AutomationProperties.LiveSetting="Polite" />
                         </StackPanel>
-                        <ComboBox x:Name="DevicePicker" Grid.Column="1" MinWidth="225" TextSearch.TextPath="Name"
+                        <ComboBox x:Name="DevicePicker" Style="{StaticResource Dropdown}" MaxDropDownHeight="360" Grid.Column="1" MinWidth="225" TextSearch.TextPath="Name"
                                   MaxWidth="360" SelectionChanged="OnDeviceChanged" Visibility="Collapsed"
                                   AutomationProperties.Name="{DynamicResource ConnectedCameras}">
                             <ComboBox.ItemTemplate>
@@ -122,8 +122,8 @@
                                     <Border Grid.Column="1" Background="#73592C" Margin="0,0,2,0" />
                                     <Border Grid.Column="2" Background="#794048" CornerRadius="0,4,4,0" />
                                     <Canvas Grid.ColumnSpan="3" IsHitTestVisible="False">
-                                        <Border x:Name="Marker" Width="5" Height="23" Canvas.Top="-3" Background="#F8FAF6"
-                                                BorderBrush="#111416" BorderThickness="1" CornerRadius="2" Visibility="Collapsed" />
+                                        <Border x:Name="Marker" Width="5" Height="23" Canvas.Top="-3" Background="{StaticResource Text}"
+                                                BorderBrush="{StaticResource Background}" BorderThickness="1" CornerRadius="2" Visibility="Collapsed" />
                                     </Canvas>
                                 </Grid>
                                 <UniformGrid Columns="3" Margin="0,12,0,0">
@@ -164,7 +164,7 @@
                                                TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 </StackPanel>
-                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="9" Background="#252D31" Margin="12,0,0,0">
+                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="9" Background="#1E405A" Margin="12,0,0,0">
                                     <Viewbox Width="24" Height="24">
                                         <Path Data="M 2,8 H 6 L 8,5 H 16 L 18,8 H 22 V 20 H 2 Z M 16,14 A 4,4 0 1 0 8,14 A 4,4 0 1 0 16,14"
                                               Stroke="{StaticResource Secondary}" StrokeThickness="1.5" StrokeLineJoin="Round" />
@@ -208,7 +208,9 @@
                                    Foreground="{StaticResource Secondary}" FontSize="13" TextWrapping="Wrap" />
                         <StackPanel x:Name="ManualPanel" Orientation="Horizontal" Margin="0,11,0,0" Visibility="Collapsed">
                             <TextBox x:Name="ManualCount" Width="158" VerticalContentAlignment="Center" Padding="7,3" MaxLength="10"
-                                     Background="{StaticResource Card}" Foreground="{StaticResource Text}" BorderBrush="{StaticResource Edge}"
+                                     Background="{StaticResource Card}" Foreground="{StaticResource Text}" BorderBrush="{StaticResource ControlEdge}"
+                                     CaretBrush="{StaticResource Accent}" SelectionBrush="{StaticResource PrimaryFill}"
+                                     SelectionTextBrush="{StaticResource PrimaryText}" SelectionOpacity="1"
                                      FlowDirection="LeftToRight" AutomationProperties.Name="{DynamicResource VerifiedCount}" />
                             <Button x:Name="ApplyCountButton" Content="{DynamicResource ApplyCount}" Click="OnApplyCount" Margin="8,0,0,0" />
                             <Button x:Name="ClearCountButton" Content="{DynamicResource Reset}" Click="OnClearCount" Margin="8,0,0,0" Visibility="Collapsed" />

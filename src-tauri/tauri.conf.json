@@ -1,0 +1,42 @@
+
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Camera Inspector",
+  "version": "0.10.0",
+  "identifier": "com.notuxius.camera-inspector",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{
+      "label": "main",
+      "title": "Camera Inspector",
+      "width": 1120,
+      "height": 760,
+      "minWidth": 540,
+      "minHeight": 560,
+      "visible": false,
+      "center": true
+    }],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-src 'none'",
+      "capabilities": []
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg"],
+    "category": "Photography",
+    "resources": {
+      "../LICENSE": "licenses/LICENSE.txt",
+      "generated-licenses/THIRD-PARTY.txt": "licenses/THIRD-PARTY.txt",
+      "generated-licenses/RUST-STD.html": "licenses/RUST-STD.html"
+    },
+    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "entitlements": "Entitlements.plist"
+    }
+  }
+}

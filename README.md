@@ -4,43 +4,52 @@ A utility for reading camera details over USB or compatible Wi-Fi connections an
 
 ## Download
 
-Download the Windows x64 installer from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). It installs Microsoft Edge WebView2 if needed. The [v0.9.0 standalone build](https://github.com/notuxius/camera-inspector/releases/tag/v0.9.0) requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
+Download Camera Inspector from [the latest release](https://github.com/notuxius/camera-inspector/releases/latest). Tauri builds use the system webview and run without .NET.
+
+| Platform | Download |
+| --- | --- |
+| Windows x64 | Run the Windows installer. It installs Microsoft Edge WebView2 if needed. |
+| macOS 13 or later on Apple Silicon | Downloads are on hold pending Apple Developer ID signing. |
+
+The [v0.9.0 standalone Windows build](https://github.com/notuxius/camera-inspector/releases/tag/v0.9.0) requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe). See the release notes for other older downloads.
 
 ## Example dashboard
 
-![Camera Inspector dashboard showing 87,000 mechanical shutter actuations on a Canon EOS 5D Mark III](docs/dashboard-example.png)
+![Camera Inspector dashboard showing 87,000 mechanical shutter actuations on an emulated Canon EOS 5D Mark III](docs/dashboard-example.png)
 
 ## Use the app
 
 Select **Open original photo** and choose a recent, unedited Nikon NEF or JPEG, Fujifilm RAF, Sony ARW or JPEG, or Pentax PEF or DNG. The reading comes from metadata saved when the picture was taken. To read camera details over USB, follow these steps.
 
-1. Connect the camera to your PC with a USB data cable and switch it on.
+1. Connect the camera to your computer with a USB data cable and switch it on.
 2. If the camera asks for a USB mode, choose photo import, remote control, or PC connection.
 3. Open Camera Inspector and select **Scan for cameras**. Close Canon EOS Utility if it is holding the connection.
+
+On macOS, allow camera access if prompted. Allow local network access when the app first scans over Wi-Fi.
 
 On the Fujifilm X-E5, select **USB CARD READER** under **Network/USB Setting** → **Connection Mode**. [Fujifilm X-E5 manual](https://app.fujifilm-dsc.com/en/manual/x-e5/connections/network_usb_menu/)
 
 ### Scan over Wi-Fi
 
-1. On a compatible Canon EOS camera, open **Connect to EOS Utility** and start pairing or reconnect to the saved Camera Inspector connection. Close EOS Utility on the PC.
-2. Join the same local network on both devices, or connect the PC to the camera’s Wi-Fi network.
+1. On a compatible Canon EOS camera, open **Connect to EOS Utility** and start pairing or reconnect to the saved Camera Inspector connection. Close EOS Utility on the computer.
+2. Join the same local network on both devices, or connect the computer to the camera’s Wi-Fi network.
 3. In Camera Inspector, select **Scan over Wi-Fi**. Pick the discovered camera address or enter its IPv4 address, then select **Connect**. Confirm pairing on the camera if prompted. [Canon EOS R8 pairing guide](https://cam.start.canon/en/C013/manual/html/UG-07_Network_0050.html)
 
 Automatic discovery looks for Canon EOS cameras advertising PC pairing. Direct IPv4 entry uses standard PTP/IP on port 15740 and can read basic metadata from other cameras that expose this protocol. Battery, Canon shutter count, and Canon error status depend on what the camera returns in that wireless mode. The USB diagnostic monitor and storage checks remain available through a USB scan. See the [Wi-Fi scanning models](#wi-fi-scanning-models) for specific models and their validation status. [Canon pairing and PTP/IP packet trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/)
 
 ### Dashboard
 
-The **Language** and **Theme** settings both default to **System**. Camera Inspector follows the Windows display language and app color settings, using English if the display language is unavailable. You can also choose a specific language or select **Light** or **Dark** and Camera Inspector will remember your choices. The **About** section in Settings shows the installed version and links to supported cameras and the latest release.
+The **Language** and **Theme** settings both default to **System**. Camera Inspector follows the system display language and app color settings, using English if the display language is unavailable. You can also choose a specific language or select **Light** or **Dark** and Camera Inspector will remember your choices. The **About** section in Settings shows the installed version and links to supported cameras and the latest release.
 
 Camera Inspector restores the dashboard window's size and position when you reopen it.
 
-Camera Inspector displays the model, firmware, serial number, battery charge, and shutter count when the source supplies them. USB discovery works through Windows Portable Devices. The app displays uncertain counters as reported and leaves the usage status gray. When the reading supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a manufacturer rating is available.
+Camera Inspector displays the model, firmware, serial number, battery charge, and shutter count when the source supplies them. USB discovery uses Windows Portable Devices on Windows and ImageCaptureCore on macOS. The app displays uncertain counters as reported and leaves the usage status gray. When the reading supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a manufacturer rating is available.
 
 The camera outline uses the shutter usage palette. It starts neutral, turns green when a read succeeds, yellow when a successful read reports an active camera error, and red when the read fails.
 
 **Camera issues** flags battery charge at 20% or below, high mechanical shutter usage, and decreases recorded in shutter history. When a Canon EOS scan receives an active error value, the app looks up its decimal value in Canon’s published on-camera error descriptions. The dashboard labels these as possible matches because the available USB traces only confirm the zero value. It also shows the original hexadecimal code. [Canon EOS error descriptions](https://asia.canon/en/support/8200669200) · [Canon EOS R USB trace](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-eos-r.txt)
 
-USB scans check storage across all supported brands. The dashboard explains full and read-only volumes exposed by Windows Portable Devices. When Windows supplies no usable storage data, the app tries read-only PTP storage queries and explains known camera responses such as unavailable, busy, or inaccessible storage. An empty storage list leaves the check inconclusive. [Windows storage properties](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/storage-properties) · [PTP responses](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
+USB scans check storage across all supported brands. The dashboard explains full and read-only volumes exposed by Windows Portable Devices. On macOS and when Windows supplies no usable storage data, the app tries read-only PTP storage queries and explains known camera responses such as unavailable, busy, or inaccessible storage. An empty storage list leaves the check inconclusive. [Windows storage properties](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/storage-properties) · [PTP responses](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 
 On bodies and USB modes that expose vendor status, the app also reads Nikon’s display error indicator, Fujifilm’s device error value, and Sony’s temperature warning. Nikon’s indicator gives no fault details, and Fujifilm values without a published interpretation are shown alongside a prompt to check the camera display. Manufacturer service logs and original-photo imports do not provide live fault information to the app. [Nikon status property](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/config.c) · [Fujifilm X-T1 trace](https://github.com/malc0mn/ptp-ip/blob/master/docs/fuji_x-t1_known-properties.md) · [Sony α7 V property trace](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/sony-a7m5.txt)
 
@@ -50,7 +59,7 @@ The dashboard shows a suggested next step under each reported issue. It asks you
 
 For the Fujifilm X-E5, install **FUJIFILM XApp** from the dashboard links, pair the camera, and look for **Number of shutter movements** under **Equipment Status**. Enter that value in Camera Inspector and select **Apply count**. The dashboard labels it **Manual count** and shows the mechanical reading even without a durability rating. Select **Reset** to restore the USB or RAF reading. [Fujifilm’s explanation of the XApp counters](https://digitalcamera-support-en.fujifilm.com/digitalcameraengpcdetail?aid=000004895)
 
-The first live scan with a serial number and shutter count saves a baseline on this PC. USB and Wi-Fi scans share history when the camera model, serial number, and Canon counter match. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored under `%LOCALAPPDATA%\Camera Info\Shutter History`.
+The first live scan with a serial number and shutter count saves a baseline on this computer. USB and Wi-Fi scans share history when the camera model, serial number, and Canon counter match. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored in `%LOCALAPPDATA%\Camera Info\Shutter History` on Windows and `~/Library/Application Support/Camera Inspector/Shutter History` on macOS.
 
 A decrease can also follow a shutter replacement. To investigate a change from before the first scan, compare with an earlier reading or service report for the same camera and counter. On bodies that report in thousands, a reading of `≤ 12,000` represents 11,001 through 12,000 actuations. A range can stay the same while the shutter is used. A range crossing a usage threshold leaves the zone unassigned.
 
@@ -67,9 +76,9 @@ Photo import runs locally. The usage zone requires a mechanical count and a publ
 
 ## Canon USB support
 
-The Windows reader has USB shutter-count routes for 22 target EOS models and retains legacy routes for the EOS 5D Mark II and original EOS 7D. See the [brand support table](#brand-support) for the model list and current support status.
+The USB reader has shutter-count routes for 22 target EOS models and retains legacy routes for the EOS 5D Mark II and original EOS 7D. See the [brand support table](#brand-support) for the model list and current support status.
 
-The headless checks emulate all 24 USB model routes at the Windows Portable Devices interface. They cover high counts on all three counter formats, interrupted transfers, read-only access, session cleanup, and how the dashboard and shutter history handle emulated readings. The diagnostic decoder uses both high bytes and the rotating low byte. A published EOS 5DS R capture for the same counter decodes to 189,052 and then 189,072 after 20 shots. An unfamiliar reply layout leaves the mechanical count unavailable. [USB product IDs](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/library.c) · [EOS R capture](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-eos-r.txt) · [EOS R8 field tests](https://github.com/DigitalN/Open-Shutter-Count/blob/main/docs/R8-PROGRESS.md) · [5D Mark IV diagnostics](https://github.com/mvisonneau/openshuttercounter/blob/main/docs/PROTOCOL.md) · [6D Mark II captures](https://github.com/mvisonneau/openshuttercounter/pull/8) · [5DS R high-count captures](https://github.com/mvisonneau/openshuttercounter/pull/5)
+The headless checks emulate all 24 USB model routes at the shared PTP interface. They cover high counts on all three counter formats, rejected commands, session cleanup, and storage status. The diagnostic decoder uses both high bytes and the rotating low byte. A published EOS 5DS R capture for the same counter decodes to 189,052 and then 189,072 after 20 shots. An unfamiliar reply layout leaves the mechanical count unavailable. [USB product IDs](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/library.c) · [EOS R capture](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-eos-r.txt) · [EOS R8 field tests](https://github.com/DigitalN/Open-Shutter-Count/blob/main/docs/R8-PROGRESS.md) · [5D Mark IV diagnostics](https://github.com/mvisonneau/openshuttercounter/blob/main/docs/PROTOCOL.md) · [6D Mark II captures](https://github.com/mvisonneau/openshuttercounter/pull/8) · [5DS R high-count captures](https://github.com/mvisonneau/openshuttercounter/pull/5)
 
 The EOS 80D firmware 1.0.1 USB log lists the diagnostic commands, and a separate desktop reader reports successful 80D reads on firmware 1.0.1 through 1.0.3. Disable Wi-Fi/NFC and time-lapse movie mode before trying an 80D USB read. [80D USB protocol log](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-80d.txt) · [80D firmware test results](https://app.camerashuttercount.com/nb/cameras/canon-eos-80d)
 
@@ -85,21 +94,29 @@ These thresholds are app-defined. The rating measures tested shutter durability 
 
 ## Build
 
-Use the .NET 10 SDK to build on Windows.
+Install the [Tauri build prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform and Node.js 24. Run these commands from the repository root.
 
-```powershell
-dotnet publish CameraInspector.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o dist/win-x64
+```sh
+npm ci
+cargo install cargo-about --version 0.9.3 --locked
+npm run licenses
+npm test
+cargo test --locked --manifest-path src-tauri/Cargo.toml --features custom-protocol
 ```
 
-Run the headless checks with `dotnet run --project tests/CameraInspector.Checks.csproj -c Release`. Pass an output directory after `--` to also render dashboard screenshots without showing a window.
+Build the Windows installer with `npm run tauri -- build --bundles nsis -- --locked`. Build the macOS disk image on an Apple Silicon Mac with `npm run tauri -- build --bundles dmg -- --locked`. The packages are written under `src-tauri/target/release/bundle`.
 
-USB transport uses the Windows MTP extensions and Canon’s EOS PTP properties. [Microsoft WPD MTP documentation](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/supporting-mtp-extensions) · [libgphoto2 property definitions](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
+The Windows installer and macOS app bundles include the MIT license and third-party notices in their `licenses` resources. GitHub Actions generates the dependency notices from `Cargo.lock` and verifies the installed files against the build inputs.
+
+GitHub Actions builds and smoke-tests both platforms and uploads the Windows installer. macOS disk images use ad-hoc signing for CI until Developer ID signing is ready. To resume macOS downloads, configure the signing secrets and set the `PUBLISH_MACOS` repository variable to `true`. A version tag matching the app version then produces a signed, notarized disk image for attachment to the GitHub Release. Verify the license and platform jobs on the published tag. [Tauri macOS signing guide](https://v2.tauri.app/distribute/sign/macos/)
+
+USB transport uses the Windows MTP extensions or ImageCaptureCore PTP commands. [Microsoft WPD MTP documentation](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/supporting-mtp-extensions) · [Apple camera API](https://developer.apple.com/documentation/imagecapturecore/iccameradevice) · [libgphoto2 property definitions](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 
 <a name="brand-support-backlog"></a>
 
 ## Brand support
 
-USB metadata includes whichever of model, manufacturer, serial number, firmware, and battery charge Windows exposes. Discovery also accepts still cameras identified by Windows Portable Devices, allowing additional and future cameras to appear without an app update. Some cameras use USB mass storage or tethering modes that expose different details. USB discovery and all 24 Canon counter routes are covered in emulation. Live Windows camera hardware validation is pending. [Windows device classification](https://learn.microsoft.com/windows/win32/wpd_sdk/wpd-device-types) · [Original RAW samples](https://raw.pixls.us/)
+USB metadata includes whichever of model, manufacturer, serial number, firmware, and battery charge the camera and operating system expose. Discovery accepts still cameras identified by Windows Portable Devices or ImageCaptureCore, allowing additional and future cameras to appear without an app update. USB mass storage and tethering modes can expose different details. All 24 Canon counter routes have emulator coverage. Camera model and firmware combinations still require physical hardware validation. [Windows device classification](https://learn.microsoft.com/windows/win32/wpd_sdk/wpd-device-types) · [Original RAW samples](https://raw.pixls.us/)
 
 See the [backlog](BACKLOG.md) for validation and implementation plans.
 
@@ -124,7 +141,7 @@ See the [backlog](BACKLOG.md) for validation and implementation plans.
 
 ### Wi-Fi scanning models
 
-**Every model in this table is still untested on real hardware with Camera Inspector.** The v0.9.0 Wi-Fi scanning checks used a PTP/IP emulator.
+**Every model in this table still needs physical Wi-Fi validation with Camera Inspector.** The PTP/IP emulator covers discovery reply parsing, the command and event connections, fragmented data, and Canon counter reads.
 
 On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
 
@@ -133,6 +150,6 @@ On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brand
 | **Canon EOS:** 6D, 70D, R, RP, R6 | PTP/IP pairing or communication has been reported with other software. [EOS 6D field report](https://github.com/gphoto/libgphoto2/issues/1133) · [EOS 70D pairing trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/) · [Pulsar PTP/IP support](https://github.com/pulsar-trigger/pulsar-trigger#canon-wi-fi-ptp-ptpip) |
 | **Canon EOS:** R8 | A gPhoto report read device information after changing how the PTP/IP session opens. Camera Inspector uses that session sequence. Reconnect problems were reported in gPhoto. [EOS R8 field report](https://github.com/gphoto/gphoto2/issues/679) |
 | **Canon EOS:** 5D Mark IV, 6D Mark II, 80D, 90D, 850D, M50 Mark II, R5, R5 Mark II, R6 Mark II, R6 Mark III, R7, R10, R50, R100 | DIRE Studio lists these models for built-in Wi-Fi shutter-count reads in its ShutterCount app. Available readings in Camera Inspector still need field testing. [ShutterCount Wi-Fi specifications](https://www.kuuvik.com/shuttercount/tech-specs/) |
-| **Nikon:** D5300 | Nikon Pull tested a physical D5300 and read standard PTP/IP device information. When Windows is connected to the camera’s Wi-Fi, try its default address, `192.168.1.1`. [Nikon Pull test notes](https://github.com/noisetta/Nikon-Pull#readme) · [D5300 connection instructions](https://dslrdashboard.info/connection-screen-buttons/) |
+| **Nikon:** D5300 | Nikon Pull tested a physical D5300 and read standard PTP/IP device information. When the computer is connected to the camera’s Wi-Fi, try its default address, `192.168.1.1`. [Nikon Pull test notes](https://github.com/noisetta/Nikon-Pull#readme) · [D5300 connection instructions](https://dslrdashboard.info/connection-screen-buttons/) |
 | **Nikon:** D5500, D7200, D750 | Nikon documents the same built-in Wi-Fi access-point mode as on the D5300. PTP/IP compatibility with Camera Inspector is inferred from that mode. [Nikon Wi-Fi compatibility guide](https://nikonimglib.com/snbr/onlinehelp/en/compatible_cameras_wmu_42.html) |
 | **Nikon:** Coolpix S9700 · **Ricoh:** THETA m15 | libgphoto2 documents PTP/IP communication over Wi-Fi for these models. [libgphoto2 release notes](https://github.com/gphoto/libgphoto2/blob/master/NEWS) |

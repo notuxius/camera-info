@@ -1,0 +1,8 @@
+
+{
+  "bundle": {
+    "resources": {
+      "attributions/windows/": "licenses/windows/"
+    }
+  }
+}

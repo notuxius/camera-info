@@ -1,0 +1,11 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Camera Inspector reads identity, status and shutter information from cameras connected over USB.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Camera Inspector discovers compatible cameras and reads their details over Wi-Fi.</string>
+</dict>
+</plist>

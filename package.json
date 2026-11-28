@@ -1,0 +1,14 @@
+
+{
+  "name": "camera-inspector",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/camera.test.js",
+    "licenses": "node scripts/prepare-licenses.js",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.13.0"
+  }
+}

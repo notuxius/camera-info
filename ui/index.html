@@ -1,0 +1,122 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Camera Inspector</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <main class="dashboard">
+    <header class="connection">
+      <div class="status" role="status"><span class="dot" aria-hidden="true"></span><span id="connection"></span></div>
+      <nav class="buttons" aria-label="Camera Inspector">
+        <button id="scan" class="primary" data-tr="Scan">Scan for cameras</button>
+        <button id="wifi" data-tr="ScanWifi">Scan over Wi-Fi</button>
+        <button id="photo" data-tr="OpenPhoto">Open original photo</button>
+        <button id="settings" data-tr="Settings">Settings</button>
+      </nav>
+      <label id="picker-row" class="device-picker" hidden>
+        <span data-tr="ConnectedCameras">Connected cameras</span>
+        <select id="picker"></select>
+      </label>
+    </header>
+
+    <div class="overview">
+      <section class="card usage-card">
+        <h2 data-tr="ShutterUsage">Shutter usage</h2>
+        <div class="count" id="count" dir="ltr">—</div>
+        <div class="muted" id="count-label"></div>
+        <p id="rating" class="muted"></p>
+        <div class="usage-status"><span id="zone"></span><span id="percent" dir="ltr"></span></div>
+        <div class="scale" dir="ltr" role="img" id="scale">
+          <div class="scale-track"><div></div><div></div><div></div></div>
+          <span id="marker" hidden></span>
+        </div>
+        <ul class="legend">
+          <li><b data-tr="Low">Low</b><span data-tr="LowRange">Below 50%</span></li>
+          <li><b data-tr="Elevated">Elevated</b><span data-tr="ElevatedRange">50% to under 80%</span></li>
+          <li><b data-tr="High">High</b><span data-tr="HighRange">80% or higher</span></li>
+        </ul>
+        <p class="muted note" id="usage-note"></p>
+        <p class="muted note" id="history" hidden></p>
+      </section>
+
+      <section class="card details-card">
+        <h2 data-tr="CameraDetails">Camera details</h2>
+        <div class="camera-icon" aria-hidden="true"><div class="camera-outline"><span></span></div></div>
+        <h3 id="model"></h3>
+        <dl class="details">
+          <div><dt data-tr="Manufacturer">Manufacturer</dt><dd id="maker"></dd></div>
+          <div><dt data-tr="SerialNumber">Serial number</dt><dd id="serial" dir="ltr"></dd></div>
+          <div><dt data-tr="Firmware">Firmware</dt><dd id="firmware" dir="ltr"></dd></div>
+          <div><dt data-tr="BatteryCharge">Battery charge</dt><dd id="battery" dir="ltr"></dd></div>
+          <div><dt data-tr="ReadingSource">Reading source</dt><dd id="source"></dd></div>
+          <div id="rating-row" hidden><dt data-tr="RatingSource">Durability rating source</dt><dd><a id="rating-link"></a></dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="card issues" id="issues" hidden>
+      <h2 data-tr="CameraIssues">Camera issues</h2>
+      <div class="issue-list" id="issue-list"></div>
+    </section>
+
+    <section class="card companions" id="companions" hidden>
+      <h2 data-tr="CompanionApps">Companion apps</h2>
+      <div id="app-list"></div>
+    </section>
+
+    <section class="card guidance">
+      <h2 id="help-title"></h2>
+      <p class="muted" id="help"></p>
+      <form id="manual-form" class="manual" hidden>
+        <label for="manual-count" data-tr="VerifiedCount">Verified mechanical shutter count</label>
+        <input id="manual-count" inputmode="numeric" autocomplete="off">
+        <button type="submit" data-tr="ApplyCount">Apply count</button>
+        <button id="reset-count" type="button" data-tr="Reset" hidden>Reset</button>
+        <p id="manual-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="wifi-dialog" aria-labelledby="wifi-title">
+    <section>
+      <h2 id="wifi-title" data-tr="ScanWifi">Scan over Wi-Fi</h2>
+      <p class="muted" data-tr="WifiSetup"></p>
+      <div class="wifi-discover">
+        <label><span data-tr="WifiFound">Discovered cameras</span><select id="addresses"></select></label>
+        <button id="discover" data-tr="WifiFind">Find cameras</button>
+      </div>
+      <form id="wifi-form">
+        <label><span data-tr="WifiAddress">Camera IP address</span><input id="address" inputmode="decimal" dir="ltr" autocomplete="off"></label>
+        <p id="wifi-status" role="status" class="muted"></p>
+        <div class="dialog-buttons">
+          <button type="button" id="close-wifi" data-tr="Close">Close</button>
+          <button type="submit" id="connect-wifi" class="primary" data-tr="WifiConnect">Connect</button>
+        </div>
+      </form>
+    </section>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <section>
+      <h2 id="settings-title" data-tr="Settings">Settings</h2>
+      <label><span data-tr="LanguageLabel">Language</span><select id="language"></select></label>
+      <label><span data-tr="ThemeLabel">Theme</span><select id="theme"></select></label>
+      <aside>
+        <h3 data-tr="About">About</h3>
+        <p class="muted" id="version"></p>
+        <div class="links">
+          <a href="https://github.com/notuxius/camera-inspector#brand-support" data-tr="SupportedCameras">Supported cameras</a>
+          <a href="https://github.com/notuxius/camera-inspector/releases/latest" data-tr="CheckForUpdates">Check for updates</a>
+        </div>
+      </aside>
+      <p id="settings-error" class="error" role="alert" hidden></p>
+      <form method="dialog" class="dialog-buttons"><button data-tr="Close">Close</button></form>
+    </section>
+  </dialog>
+</body>
+</html>

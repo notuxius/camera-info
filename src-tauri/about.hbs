@@ -1,0 +1,20 @@
+
+Camera Inspector third-party Rust dependencies
+
+The following notices cover the locked Windows x64 and Apple Silicon macOS
+builds. The source archive for each listed version is linked below.
+The Rust standard library and Windows installer components have separate
+notices in this directory.
+
+{{#each licenses}}
+===============================================================================
+{{{name}}} ({{id}})
+
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}
+  https://static.crates.io/crates/{{crate.name}}/{{crate.name}}-{{crate.version}}.crate
+{{/each}}
+
+{{{text}}}
+
+{{/each}}

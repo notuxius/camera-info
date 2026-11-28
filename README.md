@@ -26,7 +26,7 @@ On the Fujifilm X-E5, select **USB CARD READER** under **Network/USB Setting** �
 2. Join the same local network on both devices, or connect the PC to the camera’s Wi-Fi network.
 3. In Camera Inspector, select **Scan over Wi-Fi**. Pick the discovered camera address or enter its IPv4 address, then select **Connect**. Confirm pairing on the camera if prompted. [Canon EOS R8 pairing guide](https://cam.start.canon/en/C013/manual/html/UG-07_Network_0050.html)
 
-Automatic discovery looks for Canon EOS cameras advertising PC pairing. Direct IPv4 entry uses standard PTP/IP on port 15740 and can read basic metadata from other cameras that expose this protocol. Battery, Canon shutter count, and Canon error status depend on what the camera returns in that wireless mode. The USB diagnostic monitor and storage checks remain available through a USB scan. Wi-Fi support has been checked with a local PTP/IP emulator and still needs testing with physical cameras. [Canon pairing and PTP/IP packet trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/)
+Automatic discovery looks for Canon EOS cameras advertising PC pairing. Direct IPv4 entry uses standard PTP/IP on port 15740 and can read basic metadata from other cameras that expose this protocol. Battery, Canon shutter count, and Canon error status depend on what the camera returns in that wireless mode. The USB diagnostic monitor and storage checks remain available through a USB scan. See the [Wi-Fi scanning models](#wi-fi-scanning-models) for specific models and their validation status. [Canon pairing and PTP/IP packet trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/)
 
 ### Dashboard
 
@@ -121,3 +121,16 @@ See the [backlog](BACKLOG.md) for validation and implementation plans.
 | **OM System and Olympus:** OM-1 Mark II, OM-3, OM-5 Mark II, E-M1 Mark III, PEN-F and other OM/Olympus bodies | USB metadata |
 | **Leica:** M11, M EV1, Q3, Q3 43, Q3 Monochrom, SL3, SL3-S | USB metadata |
 | **Hasselblad:** X1D II 50C, X2D 100C, X2D II 100C, 907X & CFV 100C | USB metadata |
+
+### Wi-Fi scanning models
+
+Camera Inspector v0.9.0 passed its PTP/IP emulator checks. All models below are candidates for hardware testing. On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
+
+| Brand and models | Wi-Fi evidence |
+| --- | --- |
+| **Canon EOS:** 6D, 70D, R, RP, R6 | PTP/IP pairing or communication has been reported with other software. [EOS 6D field report](https://github.com/gphoto/libgphoto2/issues/1133) · [EOS 70D pairing trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/) · [Pulsar PTP/IP support](https://github.com/pulsar-trigger/pulsar-trigger#canon-wi-fi-ptp-ptpip) |
+| **Canon EOS:** R8 | A gPhoto report read device information after changing how the PTP/IP session opens. Camera Inspector uses that session sequence. Reconnect problems were reported in gPhoto. [EOS R8 field report](https://github.com/gphoto/gphoto2/issues/679) |
+| **Canon EOS:** 5D Mark IV, 6D Mark II, 80D, 90D, 850D, M50 Mark II, R5, R5 Mark II, R6 Mark II, R6 Mark III, R7, R10, R50, R100 | DIRE Studio lists these models for built-in Wi-Fi shutter-count reads in its ShutterCount app. Available readings in Camera Inspector still need field testing. [ShutterCount Wi-Fi specifications](https://www.kuuvik.com/shuttercount/tech-specs/) |
+| **Nikon:** D5300 | Nikon Pull tested a physical D5300 and read standard PTP/IP device information. When Windows is connected to the camera’s Wi-Fi, try its default address, `192.168.1.1`. [Nikon Pull test notes](https://github.com/noisetta/Nikon-Pull#readme) · [D5300 connection instructions](https://dslrdashboard.info/connection-screen-buttons/) |
+| **Nikon:** D5500, D7200, D750 | Nikon documents the same built-in Wi-Fi access-point mode as on the D5300. PTP/IP compatibility with Camera Inspector is inferred from that mode. [Nikon Wi-Fi compatibility guide](https://nikonimglib.com/snbr/onlinehelp/en/compatible_cameras_wmu_42.html) |
+| **Nikon:** Coolpix S9700 · **Ricoh:** THETA m15 | libgphoto2 documents PTP/IP communication over Wi-Fi for these models. [libgphoto2 release notes](https://github.com/gphoto/libgphoto2/blob/master/NEWS) |

@@ -137,7 +137,9 @@ See the [backlog](BACKLOG.md) for validation and implementation plans.
 
 ### Wi-Fi scanning models
 
-The PTP/IP emulator covers discovery reply parsing, the command and event connections, fragmented data, and Canon counter reads. All models below are candidates for hardware testing. On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
+**Every model in this table still needs physical Wi-Fi validation with Camera Inspector.** The PTP/IP emulator covers discovery reply parsing, the command and event connections, fragmented data, and Canon counter reads.
+
+On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
 
 | Brand and models | Wi-Fi evidence |
 | --- | --- |

@@ -78,7 +78,35 @@ button, select, input {
 }
 button { font-weight: 600; cursor: pointer; }
 button:hover:not(:disabled) { filter: brightness(.94); }
-button:disabled { opacity: .58; cursor: default; }
+button:disabled, select:disabled { opacity: .58; cursor: default; }
+@supports (appearance: base-select) {
+  select, select::picker(select) { appearance: base-select; }
+  select::picker(select) {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--control-edge);
+    border-radius: 6px;
+    font: inherit;
+    padding: .2rem;
+    margin-block: .25rem;
+    max-block-size: min(22rem, 55dvh);
+  }
+  select::picker-icon {
+    content: "";
+    align-self: center;
+    flex: none;
+    inline-size: 5.5px;
+    block-size: 5.5px;
+    margin-inline: auto -.35rem;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  select option { border-radius: 4px; padding: .35rem .5rem; }
+  select option:is(:hover, :focus) { background: var(--inset); outline-offset: -2px; }
+  select option:checked { font-weight: 600; }
+  select option::checkmark { order: 1; margin-inline-start: auto; color: var(--accent); }
+}
 .primary { color: var(--primary-text); background: var(--primary); border-color: var(--primary); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 a { color: var(--accent); cursor: pointer; text-underline-offset: 3px; }

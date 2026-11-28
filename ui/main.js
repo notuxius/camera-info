@@ -18,6 +18,7 @@ const languages = {
   ru: ["Русский", "ru-RU"], es: ["Español", "es-ES"], uk: ["Українська", "uk-UA"], ur: ["اردو", "ur-PK"],
 };
 const localeCache = new Map();
+const busySelects = new WeakSet();
 let preferences;
 let catalog;
 let fallback;
@@ -41,6 +42,16 @@ function t(key, ...args) {
   });
 }
 
+function updateSelectAvailability(select) {
+  select.disabled = select.options.length === 0 || busySelects.has(select);
+}
+
+function setSelectBusy(select, active) {
+  if (active) busySelects.add(select);
+  else busySelects.delete(select);
+  updateSelectAvailability(select);
+}
+
 function setupSelect(select, options) {
   select.replaceChildren(...options.map(([value, label]) => {
     const option = document.createElement("option");
@@ -48,6 +59,7 @@ function setupSelect(select, options) {
     option.textContent = label;
     return option;
   }));
+  updateSelectAvailability(select);
 }
 
 function systemLanguage() {
@@ -307,14 +319,15 @@ function applyReport(next, key) {
 
 function setBusy(value) {
   busy = value;
-  for (const id of ["scan", "wifi", "photo", "picker"]) el(id).disabled = value;
+  for (const id of ["scan", "wifi", "photo"]) el(id).disabled = value;
+  setSelectBusy(el("picker"), value);
 }
 
 function renderPicker() {
   const display = devices.length > 1 || (devices.length > 0 && !activeDevice);
   visible("picker-row", display);
   const options = devices.map(device => [device.id, device.name ?? t("UnknownCamera")]);
-  if (!activeDevice) options.unshift(["", t("ConnectedCameras")]);
+  if (!activeDevice && options.length) options.unshift(["", t("ConnectedCameras")]);
   setupSelect(el("picker"), options);
   el("picker").value = activeDevice;
 }
@@ -394,7 +407,8 @@ el("photo").addEventListener("click", async () => {
 
 function setWifiBusy(value) {
   wifiBusy = value;
-  for (const id of ["addresses", "address", "discover", "connect-wifi"]) el(id).disabled = value;
+  for (const id of ["address", "discover", "connect-wifi"]) el(id).disabled = value;
+  setSelectBusy(el("addresses"), value);
 }
 
 el("wifi").addEventListener("click", () => {
@@ -490,7 +504,7 @@ function settingsError(error) {
 el("language").addEventListener("change", async event => {
   const choice = event.target;
   const language = choice.value;
-  choice.disabled = true;
+  setSelectBusy(choice, true);
   try {
     await invoke("save_language", { language });
     preferences.language = language;
@@ -499,14 +513,14 @@ el("language").addEventListener("change", async event => {
     choice.value = preferences.language;
     settingsError(error);
   } finally {
-    choice.disabled = false;
+    setSelectBusy(choice, false);
   }
 });
 
 el("theme").addEventListener("change", async event => {
   const choice = event.target;
   const theme = choice.value;
-  choice.disabled = true;
+  setSelectBusy(choice, true);
   try {
     await invoke("save_theme", { theme });
     preferences.theme = theme;
@@ -515,7 +529,7 @@ el("theme").addEventListener("change", async event => {
     choice.value = preferences.theme;
     settingsError(error);
   } finally {
-    choice.disabled = false;
+    setSelectBusy(choice, false);
   }
 });
 

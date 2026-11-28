@@ -21,7 +21,7 @@
       <time id="usb-scan-time" class="usb-scan-time muted" hidden></time>
       <label id="picker-row" class="device-picker" hidden>
         <span data-tr="ConnectedCameras">Connected cameras</span>
-        <select id="picker"></select>
+        <select id="picker" disabled></select>
       </label>
     </header>
 
@@ -88,7 +88,7 @@
       <h2 id="wifi-title" data-tr="ScanWifi">Scan over Wi-Fi</h2>
       <p class="muted" data-tr="WifiSetup"></p>
       <div class="wifi-discover">
-        <label><span data-tr="WifiFound">Discovered cameras</span><select id="addresses"></select></label>
+        <label><span data-tr="WifiFound">Discovered cameras</span><select id="addresses" disabled></select></label>
         <button id="discover" data-tr="WifiFind">Find cameras</button>
       </div>
       <form id="wifi-form">
@@ -105,8 +105,8 @@
   <dialog id="settings-dialog" aria-labelledby="settings-title">
     <section>
       <h2 id="settings-title" data-tr="Settings">Settings</h2>
-      <label><span data-tr="LanguageLabel">Language</span><select id="language"></select></label>
-      <label><span data-tr="ThemeLabel">Theme</span><select id="theme"></select></label>
+      <label><span data-tr="LanguageLabel">Language</span><select id="language" disabled></select></label>
+      <label><span data-tr="ThemeLabel">Theme</span><select id="theme" disabled></select></label>
       <aside>
         <h3 data-tr="About">About</h3>
         <p class="muted" id="version"></p>

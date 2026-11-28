@@ -15,7 +15,7 @@ Release notes list the requirements for older downloads.
 
 ## Example dashboard
 
-![Camera Inspector dashboard showing 87,000 mechanical shutter actuations on a Canon EOS 5D Mark III](docs/dashboard-example.png)
+![Camera Inspector dashboard showing 87,000 mechanical shutter actuations on an emulated Canon EOS 5D Mark III](docs/dashboard-example.png)
 
 ## Use the app
 

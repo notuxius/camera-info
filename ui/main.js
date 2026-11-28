@@ -108,8 +108,12 @@ function render() {
   text("battery", battery);
   text("source", !reading ? "—" : manual !== null ? t("ManualCount") : reading.source === "Wifi" ? "Wi-Fi" : reading.source.toUpperCase());
   visible("rating-row", Boolean(durability));
-  if (durability) el("rating-link").href = durability[1];
-  else el("rating-link").removeAttribute("href");
+  if (durability) {
+    const reference = new URL(durability[1]);
+    el("rating-link").href = reference.href;
+    el("rating-link").textContent = reference.hostname.replace(/^www\./, "");
+    el("rating-link").setAttribute("aria-label", t("RatingSource") + " — " + reading.maker);
+  } else el("rating-link").removeAttribute("href");
   text("count", count ? countText(count.value, count.isUpperBound) : "—");
   text("count-label", t(count?.kind === "Mechanical" ? "MechanicalCount" : count?.kind === "Image" ? "ImageCount" : "ReportedCount"));
   text("rating", max ? t("Rating", max) : t("NoRating"));
@@ -443,26 +447,34 @@ function settingsError(error) {
 }
 
 el("language").addEventListener("change", async event => {
-  const language = event.target.value;
+  const choice = event.target;
+  const language = choice.value;
+  choice.disabled = true;
   try {
     await invoke("save_language", { language });
     preferences.language = language;
     await setLanguage();
   } catch (error) {
-    event.target.value = preferences.language;
+    choice.value = preferences.language;
     settingsError(error);
+  } finally {
+    choice.disabled = false;
   }
 });
 
 el("theme").addEventListener("change", async event => {
-  const theme = event.target.value;
+  const choice = event.target;
+  const theme = choice.value;
+  choice.disabled = true;
   try {
     await invoke("save_theme", { theme });
     preferences.theme = theme;
     document.documentElement.dataset.theme = theme;
   } catch (error) {
-    event.target.value = preferences.theme;
+    choice.value = preferences.theme;
     settingsError(error);
+  } finally {
+    choice.disabled = false;
   }
 });
 

@@ -115,7 +115,6 @@
   "NoCameraDetected": "कोई कैमरा नहीं मिला",
   "Scanning": "USB कैमरे खोजे जा रहे हैं…",
   "UsbCameraNotFound": "कोई USB कैमरा नहीं मिला",
-  "UsbLastChecked": "पिछली जाँच {0:T} बजे",
   "ScanFailed": "कैमरा खोज विफल रही",
   "ScanFailedHelp": "Windows पोर्टेबल डिवाइस नहीं खोज सका। कैमरा फिर से कनेक्ट करें और दोबारा खोजें।",
   "ReadingCamera": "कैमरे से डेटा पढ़ा जा रहा है…",

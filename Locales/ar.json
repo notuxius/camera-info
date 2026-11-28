@@ -115,7 +115,6 @@
   "NoCameraDetected": "لم يُعثر على أي كاميرا",
   "Scanning": "جارٍ البحث عن كاميرات USB…",
   "UsbCameraNotFound": "لم يُعثر على كاميرا USB",
-  "UsbLastChecked": "آخر فحص في {0:T}",
   "ScanFailed": "تعذّر البحث عن الكاميرات",
   "ScanFailedHelp": "تعذّر على Windows البحث عن الأجهزة المحمولة. أعِد توصيل الكاميرا وحاول البحث مجددًا.",
   "ReadingCamera": "جارٍ قراءة بيانات الكاميرا…",

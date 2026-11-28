@@ -28,16 +28,14 @@ let manual = null;
 let devices = [];
 let activeDevice = "";
 let status = "NoCameraDetected";
-let usbCheckedAt = null;
 let helpOverride = null;
 let busy = false;
 let wifiBusy = false;
 
 function t(key, ...args) {
-  return (catalog[key] ?? fallback[key] ?? key).replace(/\{(\d+)(?::(N0|d|T))?\}/g, (_, i, format) => {
+  return (catalog[key] ?? fallback[key] ?? key).replace(/\{(\d+)(?::(N0|d))?\}/g, (_, i, format) => {
     if (format === "N0") return number(args[i]);
     if (format === "d") return new Date(args[i]).toLocaleDateString(locale);
-    if (format === "T") return new Intl.DateTimeFormat(locale, { timeStyle: "medium" }).format(args[i]);
     return String(args[i] ?? "");
   });
 }
@@ -96,7 +94,6 @@ async function fitConnectionBar() {
   measure.classList.add("connection-measure");
   measure.inert = true;
   measure.querySelector(".device-picker").remove();
-  measure.querySelector(".usb-scan-time").remove();
   for (const item of measure.querySelectorAll("[id]")) item.removeAttribute("id");
   dashboard.append(measure);
   const label = measure.querySelector(".status-message");
@@ -116,12 +113,6 @@ async function fitConnectionBar() {
 
 function showStatus() {
   text("connection", t(status));
-  const time = el("usb-scan-time");
-  time.hidden = status !== "UsbCameraNotFound" || usbCheckedAt === null;
-  if (!time.hidden) {
-    time.dateTime = usbCheckedAt.toISOString();
-    time.textContent = t("UsbLastChecked", usbCheckedAt);
-  }
   const body = document.documentElement.style;
   const state = success.has(status) ? "success" : failure.has(status) ? "error" : "muted";
   const activeError = report?.reading.deviceErrorCode > 0;
@@ -365,7 +356,6 @@ el("scan").addEventListener("click", async () => {
     if (devices.length) {
       await readDevice((devices.find(device => device.id === previous) ?? devices[0]).id);
     } else {
-      usbCheckedAt = new Date();
       setStatus("UsbCameraNotFound");
     }
   } catch {

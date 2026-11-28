@@ -115,7 +115,6 @@
   "NoCameraDetected": "Aucun appareil détecté",
   "Scanning": "Recherche d’appareils photo USB…",
   "UsbCameraNotFound": "Aucun appareil photo USB détecté",
-  "UsbLastChecked": "Dernière recherche à {0:T}",
   "ScanFailed": "La recherche a échoué",
   "ScanFailedHelp": "Windows n’a pas pu rechercher les périphériques portables. Reconnectez l’appareil et relancez la recherche.",
   "ReadingCamera": "Lecture de l’appareil…",

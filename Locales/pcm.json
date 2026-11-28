@@ -115,7 +115,6 @@
   "NoCameraDetected": "We no find any camera",
   "Scanning": "We dey find USB cameras…",
   "UsbCameraNotFound": "We no find any USB camera",
-  "UsbLastChecked": "Last time we check na {0:T}",
   "ScanFailed": "We no fit search for cameras",
   "ScanFailedHelp": "Windows no fit search for portable devices. Connect di camera again, den search again.",
   "ReadingCamera": "We dey read di camera…",

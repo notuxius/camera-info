@@ -27,6 +27,7 @@ struct Inspector {
     operation: Arc<Mutex<()>>,
     cancelled: Arc<AtomicBool>,
     smoke: bool,
+    center_on_startup: bool,
 }
 
 #[derive(Serialize)]
@@ -231,10 +232,40 @@ fn fit_window(window: WebviewWindow, min_width: u32) -> Result<(), String> {
     Ok(())
 }
 
+fn center_startup_window(window: &WebviewWindow) -> tauri::Result<Option<PhysicalPosition<i32>>> {
+    let monitor = match window.primary_monitor()? {
+        Some(monitor) => monitor,
+        None => match window.current_monitor()? {
+            Some(monitor) => monitor,
+            None => return Ok(None),
+        },
+    };
+    let area = monitor.work_area();
+    let size = window.outer_size()?;
+    let position = PhysicalPosition::new(
+        area.position.x + (area.size.width.saturating_sub(size.width) / 2) as i32,
+        area.position.y + (area.size.height.saturating_sub(size.height) / 2) as i32,
+    );
+    window.set_position(position)?;
+    Ok(Some(position))
+}
+
 #[tauri::command]
 fn ui_ready(app: AppHandle, window: WebviewWindow, state: State<'_, Inspector>) -> Result<(), String> {
+    // The dashboard can change the window size before it is shown.
+    let center = if state.center_on_startup && !window.is_maximized().map_err(error)? {
+        center_startup_window(&window).map_err(error)?
+    } else {
+        None
+    };
     if state.smoke {
-        app.exit(0);
+        let actual = window.outer_position().map_err(error)?;
+        let centered = center.is_some_and(|position|
+            actual.x.abs_diff(position.x) <= 2 && actual.y.abs_diff(position.y) <= 2);
+        if !centered {
+            eprintln!("Expected startup position {center:?}, got {actual:?}");
+        }
+        app.exit(if centered { 0 } else { 1 });
         return Ok(());
     }
     window.show().map_err(error)
@@ -261,18 +292,22 @@ fn read_placement(window: &WebviewWindow) -> Option<Placement> {
     })
 }
 
-fn restore_window(window: &WebviewWindow, path: &Path) {
+fn restore_window(window: &WebviewWindow, path: &Path) -> bool {
     let saved = fs::read(path).ok().and_then(|value| serde_json::from_slice::<Placement>(&value).ok());
+    let mut position_restored = false;
+    let mut maximize = false;
     if let Some(saved) = saved {
         let size = saved.right.checked_sub(saved.left).zip(saved.bottom.checked_sub(saved.top))
             .filter(|(width, height)| (360..=16_384).contains(width) && (280..=16_384).contains(height));
         if let Some((width, height)) = size {
+            maximize = saved.maximized;
             let _ = window.set_size(PhysicalSize::new(width as u32, height as u32));
             let point = (f64::from(saved.left) + 48.0, f64::from(saved.top) + 24.0);
             if window.monitor_from_point(point.0, point.1).ok().flatten().is_some() {
-                let _ = window.set_position(PhysicalPosition::new(saved.left, saved.top));
-            } else {
-                let _ = window.center();
+                position_restored = window.set_position(PhysicalPosition::new(saved.left, saved.top)).is_ok();
+            }
+            if maximize && !position_restored {
+                let _ = center_startup_window(window);
             }
         }
     }
@@ -299,9 +334,10 @@ fn restore_window(window: &WebviewWindow, path: &Path) {
             _ => {}
         }
     });
-    if saved.is_some_and(|saved| saved.maximized) {
+    if maximize {
         let _ = window.maximize();
     }
+    position_restored
 }
 
 fn main() {
@@ -315,11 +351,17 @@ fn main() {
                 app.path().data_dir()?.join("Camera Inspector")
             };
             let window = app.get_webview_window("main").ok_or_else(|| io::Error::other("Missing dashboard window."))?;
-            if !smoke {
-                restore_window(&window, &dir.join("window.json"));
-            }
+            let placement_dir = if cfg!(target_os = "windows") {
+                // The Windows uninstaller clears the bundle data directory on request.
+                app.path().app_local_data_dir()?
+            } else {
+                dir.clone()
+            };
+            let center_on_startup = smoke || !restore_window(&window, &placement_dir.join("window.json"));
             let _ = apply_theme(&window, &data::text(&dir.join("theme.txt")));
-            app.manage(Inspector { dir, devices: Arc::default(), operation: Arc::default(), cancelled: Arc::default(), smoke });
+            app.manage(Inspector {
+                dir, devices: Arc::default(), operation: Arc::default(), cancelled: Arc::default(), smoke, center_on_startup,
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

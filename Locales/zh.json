@@ -115,7 +115,6 @@
   "NoCameraDetected": "未检测到相机",
   "Scanning": "正在搜索 USB 相机…",
   "UsbCameraNotFound": "未找到 USB 相机",
-  "UsbLastChecked": "上次扫描时间 {0:T}",
   "ScanFailed": "相机搜索失败",
   "ScanFailedHelp": "Windows 无法搜索便携设备。请重新连接相机后再次搜索。",
   "ReadingCamera": "正在读取相机…",

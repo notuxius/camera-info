@@ -115,7 +115,6 @@
   "NoCameraDetected": "مفيش كاميرا اتلقطت",
   "Scanning": "بندوّر على كاميرات USB…",
   "UsbCameraNotFound": "مفيش كاميرا USB اتلقطت",
-  "UsbLastChecked": "آخر فحص الساعة {0:T}",
   "ScanFailed": "البحث عن الكاميرات فشل",
   "ScanFailedHelp": "Windows مقدرش يدوّر على الأجهزة المحمولة. وصّل الكاميرا تاني ودوّر من جديد.",
   "ReadingCamera": "بنقرا بيانات الكاميرا…",

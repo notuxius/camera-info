@@ -115,7 +115,6 @@
   "NoCameraDetected": "Tidak ada kamera terdeteksi",
   "Scanning": "Mencari kamera USB…",
   "UsbCameraNotFound": "Tidak ada kamera USB yang ditemukan",
-  "UsbLastChecked": "Terakhir diperiksa pukul {0:T}",
   "ScanFailed": "Pencarian kamera gagal",
   "ScanFailedHelp": "Windows tidak dapat mencari perangkat portabel. Sambungkan kembali kamera dan ulangi pencarian.",
   "ReadingCamera": "Membaca data kamera…",

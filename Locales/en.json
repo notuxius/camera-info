@@ -115,7 +115,6 @@
   "NoCameraDetected": "No camera detected",
   "Scanning": "Scanning USB…",
   "UsbCameraNotFound": "No USB camera found",
-  "UsbLastChecked": "Last checked at {0:T}",
   "ScanFailed": "Camera scan failed",
   "ScanFailedHelp": "Windows could not scan for portable devices. Reconnect the camera and scan again.",
   "ReadingCamera": "Reading camera…",

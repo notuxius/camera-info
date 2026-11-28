@@ -115,7 +115,6 @@
   "NoCameraDetected": "Камеры не обнаружены",
   "Scanning": "Поиск USB-камер…",
   "UsbCameraNotFound": "USB-камеры не найдены",
-  "UsbLastChecked": "Последний поиск в {0:T}",
   "ScanFailed": "Не удалось найти камеры",
   "ScanFailedHelp": "Windows не удалось выполнить поиск переносных устройств. Подключите камеру заново и повторите поиск.",
   "ReadingCamera": "Чтение данных камеры…",

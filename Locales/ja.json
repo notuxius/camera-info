@@ -115,7 +115,6 @@
   "NoCameraDetected": "カメラが見つかりません",
   "Scanning": "USBカメラを検索中…",
   "UsbCameraNotFound": "USBカメラが見つかりません",
-  "UsbLastChecked": "最終確認時刻 {0:T}",
   "ScanFailed": "カメラの検索に失敗しました",
   "ScanFailedHelp": "Windows はポータブルデバイスを検索できませんでした。カメラを接続し直して、もう一度検索してください。",
   "ReadingCamera": "カメラのデータを読み取り中…",

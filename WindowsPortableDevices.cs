@@ -26,6 +26,10 @@ internal interface IPortableDeviceManager
     void RefreshDeviceList();
     [PreserveSig] int GetDeviceFriendlyName([MarshalAs(UnmanagedType.LPWStr)] string id,
         [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder? name, ref uint length);
+    void GetDeviceDescription();
+    void GetDeviceManufacturer();
+    [PreserveSig] int GetDeviceProperty([MarshalAs(UnmanagedType.LPWStr)] string id,
+        [MarshalAs(UnmanagedType.LPWStr)] string property, ref uint value, ref uint size, out uint type);
 }
 
 [ComImport, Guid("625e2df8-6392-4cf0-9ad1-3cfa5f17775c"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

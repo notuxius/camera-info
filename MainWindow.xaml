@@ -17,10 +17,6 @@
                 </Grid.RowDefinitions>
 
                 <Grid Margin="0,0,0,24">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
                         <ColumnDefinition Width="Auto" />
@@ -37,33 +33,23 @@
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Camera Inspector" FontSize="24" FontWeight="SemiBold" />
-                            <TextBlock Text="{DynamicResource UsbDiagnostics}" Foreground="{StaticResource Secondary}" FontSize="13" />
+                            <TextBlock Text="{DynamicResource CameraDiagnostics}" Foreground="{StaticResource Secondary}" FontSize="13" />
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,8">
                             <Label x:Name="LanguageLabel" Content="{DynamicResource LanguageLabel}" Target="{Binding ElementName=LanguagePicker}"
                                    Foreground="{StaticResource Secondary}" Padding="0,0,8,0" VerticalAlignment="Center" />
                             <ComboBox x:Name="LanguagePicker" Style="{StaticResource Dropdown}" MinWidth="156" MaxDropDownHeight="360"
                                       SelectionChanged="OnLanguageChanged"
                                       AutomationProperties.LabeledBy="{Binding ElementName=LanguageLabel}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button x:Name="AboutButton" Content="{DynamicResource About}" Margin="0,0,9,0" Click="OnAbout" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                             <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}" Click="OnScan" />
+                            <Button x:Name="OpenPhotoButton" Content="{DynamicResource OpenPhoto}" Margin="9,0,0,0" Click="OnOpenPhoto" />
+                            <Button x:Name="AboutButton" Content="{DynamicResource About}" Margin="9,0,0,0" Click="OnAbout" />
                         </StackPanel>
                     </StackPanel>
-                    <Border x:Name="AboutPanel" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Visibility="Collapsed"
-                            Background="{StaticResource Card}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
-                            CornerRadius="{StaticResource ButtonCornerRadius}" Margin="0,8,0,0" Padding="15,10">
-                        <StackPanel>
-                            <TextBlock x:Name="VersionText" Foreground="{StaticResource Secondary}" Margin="0,0,0,6" />
-                            <TextBlock>
-                                <Hyperlink x:Name="SupportedCamerasLink" Foreground="{StaticResource Accent}"
-                                           NavigateUri="https://github.com/notuxius/camera-inspector#brand-support-backlog" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource SupportedCameras}" /></Hyperlink>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
                 </Grid>
 
                 <Border Grid.Row="1" Background="{StaticResource Inset}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
@@ -228,7 +214,7 @@
                     <StackPanel>
                         <TextBlock x:Name="HelpTitle" FontWeight="SemiBold" Margin="0,0,0,3" />
                         <TextBlock x:Name="HelpText"
-                                   Foreground="{StaticResource Secondary}" FontSize="13" />
+                                   Foreground="{StaticResource Secondary}" FontSize="13" TextWrapping="Wrap" />
                         <StackPanel x:Name="ManualPanel" Orientation="Horizontal" Margin="0,11,0,0" Visibility="Collapsed">
                             <TextBox x:Name="ManualCount" Width="158" VerticalContentAlignment="Center" Padding="7,3" MaxLength="10"
                                      Background="{StaticResource Card}" Foreground="{StaticResource Text}" BorderBrush="{StaticResource Edge}"

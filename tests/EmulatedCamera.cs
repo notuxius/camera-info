@@ -22,6 +22,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
     private int _disconnectError;
 
     internal string? Model { get; init; } = " Canon Digital Camera ";
+    internal string Maker { get; init; } = " Canon ";
     internal uint Battery { get; init; } = 72;
     internal bool ReadOnly { get; init; }
     internal bool MissingDetails { get; init; }
@@ -83,7 +84,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
         values = NewValues();
         if (Model is not null)
             values.SetStringValue(new(Device, 8), Model);
-        values.SetStringValue(new(Device, 7), " Canon ");
+        values.SetStringValue(new(Device, 7), Maker);
         values.SetStringValue(new(Device, 9), " EMULATED-123 ");
         values.SetStringValue(new(Device, 3), " 1.3.6 ");
         values.SetUnsignedIntegerValue(new(Device, 4), Battery);

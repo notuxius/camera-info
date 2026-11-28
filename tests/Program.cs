@@ -29,9 +29,11 @@ internal static partial class Program
         Check(ShutterUsage.From(new(5, CountKind.Mechanical), null) is null, "Missing rating has no zone");
         CheckCanonUsb(rating);
         Task.Run(CheckCameraEmulation).GetAwaiter().GetResult();
+        Task.Run(CheckNikonUsb).GetAwaiter().GetResult();
+        Task.Run(CheckAdditionalUsbCameras).GetAwaiter().GetResult();
 
         int cameras = Task.Run(() => WindowsCamera.Find().Count).GetAwaiter().GetResult();
-        Console.WriteLine($"Windows USB discovery completed with {cameras} Canon camera(s).");
+        Console.WriteLine($"Windows USB discovery completed with {cameras} supported camera(s).");
 
         var app = new App();
         app.InitializeComponent();
@@ -55,12 +57,13 @@ internal static partial class Program
         Check(Label(window, "CountText") == "—", "Disconnected window has no count");
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "disconnected");
-        CheckAbout(window, dashboard, renderFolder);
         string testDirectory = Path.GetDirectoryName(preferencePath)!;
         CheckEmulatedScan(preferencePath, Path.Combine(testDirectory, "emulated-history"));
         CheckScanWithoutCamera(preferencePath, Path.Combine(testDirectory, "empty-scan-history"));
         CheckScanWithDisconnect(preferencePath, Path.Combine(testDirectory, "disconnect-history"));
         CheckScanWithShutterReadDisconnect(preferencePath, Path.Combine(testDirectory, "read-disconnect-history"));
+        CheckNikonPhotos(preferencePath, testDirectory, renderFolder);
+        CheckAdditionalPhotos(preferencePath, testDirectory, renderFolder);
         CheckShutterHistory(window, renderFolder);
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "shutter-decrease");
@@ -78,21 +81,27 @@ internal static partial class Program
     private static CameraReading ExampleReading(uint count) =>
         new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
 
-    private static void CheckAbout(MainWindow window, Grid dashboard, string? renderFolder)
+    private static void CheckAbout(LanguageOption option, IReadOnlyDictionary<string, string> catalog,
+        FlowDirection direction, string? renderFolder)
     {
-        var button = (Button)window.FindName("AboutButton");
-        var panel = (Border)window.FindName("AboutPanel");
-        var link = (Hyperlink)window.FindName("SupportedCamerasLink");
+        var dialog = new AboutWindow(option, catalog);
+        var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
+        var checkForUpdates = (Hyperlink)dialog.FindName("CheckForUpdatesLink");
+        var close = (Button)dialog.FindName("CloseButton");
         string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
-        Check(panel.Visibility == Visibility.Collapsed, "About starts closed");
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Check(panel.Visibility == Visibility.Visible && Label(window, "VersionText") == $"Version {version}" &&
-            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector#brand-support-backlog",
-            "About shows the running app version and links to supported cameras");
-        if (renderFolder is not null)
-            Render(dashboard, renderFolder, "about", 786);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Check(panel.Visibility == Visibility.Collapsed, "About closes when selected again");
+        Check(dialog.Title == catalog["About"] && dialog.FlowDirection == direction &&
+            Label(dialog, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
+            $"About shows the app version and uses the selected language ({option.Code})");
+        Check(close.IsCancel && (string)close.Content == catalog["Close"], $"About has a localized Close button ({option.Code})");
+        Check(supportedCameras.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector#brand-support-backlog" &&
+            ((Run)supportedCameras.Inlines.FirstInline).Text == catalog["SupportedCameras"],
+            $"About links to supported cameras ({option.Code})");
+        Check(checkForUpdates.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector/releases/latest" &&
+            ((Run)checkForUpdates.Inlines.FirstInline).Text == catalog["CheckForUpdates"],
+            $"About links to the latest GitHub release ({option.Code})");
+        if (renderFolder is not null && option.Code is "en" or "ar")
+            Render((Grid)dialog.Content, renderFolder, $"about-{option.Code}", 344, 224);
+        dialog.Close();
     }
 
     private static void CheckLanguages(MainWindow window, string preferencePath, string? renderFolder)
@@ -101,8 +110,6 @@ internal static partial class Program
         var english = (LanguageOption)picker.SelectedItem;
         var original = Languages.Catalog(english);
         var aboutButton = (Button)window.FindName("AboutButton");
-        var supportedCameras = (Run)((Hyperlink)window.FindName("SupportedCamerasLink")).Inlines.FirstInline;
-        string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
         Check(english.Code == "en", "No saved language defaults to English");
         Check(string.Join(" ", picker.Items.Cast<LanguageOption>().Select(option => option.Code)) ==
             "ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "Picker matches Relf's 16 languages");
@@ -123,9 +130,9 @@ internal static partial class Program
             var direction = option.Code is "ar" or "arz" or "ur" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             Check(window.FlowDirection == direction, $"{option.Code} has the expected layout direction");
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
-            Check((string)aboutButton.Content == catalog["About"] && supportedCameras.Text == catalog["SupportedCameras"] &&
-                Label(window, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
-                $"About updates to {option.Code}");
+            Check((string)((Button)window.FindName("OpenPhotoButton")).Content == catalog["OpenPhoto"], "The photo button updates on language selection");
+            Check((string)aboutButton.Content == catalog["About"], $"The About button updates to {option.Code}");
+            CheckAbout(option, catalog, direction, renderFolder);
             Check(Label(window, "ConnectionText") == catalog["UsbConnected"] &&
                 Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the USB reading");
             Check(Label(window, "CountText") == 87_000.ToString("N0", option.Culture), "Shutter count uses the selected language's number format");
@@ -168,7 +175,9 @@ internal static partial class Program
     {
         Check(CanonShutter.UsbModel("VID_0000&PID_3281") is null, "Other vendors cannot select the Canon monitor");
         Check(CanonShutter.UsbModel("USB\\VID_04A9&PID_3294") == "Canon EOS 80D", "The 80D diagnostic route uses its recorded USB product ID");
-        Check(CanonShutter.ProtocolFor("Canon EOS R50 V") == CanonCounterProtocol.Unknown, "A similar model stays outside the model list");
+        Check(CanonShutter.UsbModel("VID_04A9&PID_3320") == "Canon EOS R50 V" &&
+            CanonShutter.ProtocolFor("Canon EOS R50 V") == CanonCounterProtocol.Unknown,
+            "The EOS R50 V has its own identity and does not inherit the EOS R50 counter format");
         foreach (string name in new[] { "Canon EOS M50m2", "Canon EOS Kiss M2", "Canon EOS Kiss X10i", "Canon EOS Rebel T8i", "Canon EOS 5Rm2", "Canon EOS R6m2" })
             Check(CanonShutter.ProtocolFor(name) == CanonCounterProtocol.ReleaseEvent, $"Firmware and regional name {name} is recognized");
 

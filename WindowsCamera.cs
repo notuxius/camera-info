@@ -53,10 +53,9 @@ internal static class WindowsCamera
                     continue;
 
                 var name = FriendlyName(manager, id);
-                bool canonUsb = id.Contains("vid_04a9", StringComparison.OrdinalIgnoreCase);
-                bool canonCameraName = name is not null && name.StartsWith("Canon", StringComparison.OrdinalIgnoreCase)
-                    && (name.Contains("EOS", StringComparison.OrdinalIgnoreCase) || name.Contains("PowerShot", StringComparison.OrdinalIgnoreCase));
-                if (canonUsb || canonCameraName)
+                if (NikonDslr.ConnectedModel(id, name) is { } nikon)
+                    cameras.Add(new(id, nikon));
+                else if (CameraIdentity.MakerForUsb(id, name) is not null || IsStillCamera(manager, id))
                     cameras.Add(new(id, name));
             }
 
@@ -95,9 +94,19 @@ internal static class WindowsCamera
 
         try
         {
-            var reading = new CameraReading(camera.Name ?? CameraDevice.UnknownName, "Canon", null, null, null, null);
+            var nikonModel = NikonDslr.ConnectedModel(camera.Id, camera.Name);
+            var maker = nikonModel is null ? CameraIdentity.MakerForUsb(camera.Id, camera.Name) : "Nikon";
+            var reading = new CameraReading(nikonModel ?? camera.Name ?? CameraDevice.UnknownName,
+                maker ?? "—", null, null, null, null);
             try { reading = ReadDetails(device, reading); }
             catch (COMException error) when (!IsDeviceDisconnected(error)) { Debug.WriteLine(error); }
+
+            if (nikonModel is not null)
+                return reading with { Model = nikonModel };
+            if (maker == "Nikon")
+                return reading with { Model = NikonNef.ModelName(reading.Model) ?? NikonNef.ModelName(camera.Name) ?? reading.Model };
+            if (maker != "Canon")
+                return reading;
 
             var usbModel = CanonShutter.UsbModel(camera.Id);
             if (usbModel is not null && CanonShutter.ModelKey(usbModel) != CanonShutter.ModelKey(reading.Model))
@@ -116,6 +125,14 @@ internal static class WindowsCamera
         {
             device.Close();
         }
+    }
+
+    private static bool IsStillCamera(IPortableDeviceManager manager, string id)
+    {
+        // The WPD class installer registers the device type as a REG_DWORD.
+        uint size = sizeof(uint), value = 0;
+        return manager.GetDeviceProperty(id, "PORTABLE_DEVICE_TYPE", ref value, ref size, out uint type) >= 0
+            && type == 4 && size == sizeof(uint) && value == 1;
     }
 
     private static string? FriendlyName(IPortableDeviceManager manager, string id)
@@ -144,7 +161,7 @@ internal static class WindowsCamera
         properties.Value.GetValues("DEVICE", keys.Value, out var rawValues);
         using var values = new ComLease<IPortableDeviceValues>(rawValues);
         var model = ReadString(values.Value, new(DeviceCategory, 8));
-        if (model is not null && !model.Contains("EOS", StringComparison.OrdinalIgnoreCase)
+        if (defaults.Maker == "Canon" && model is not null && !model.Contains("EOS", StringComparison.OrdinalIgnoreCase)
             && defaults.Model.Contains("EOS", StringComparison.OrdinalIgnoreCase))
             model = defaults.Model;
 

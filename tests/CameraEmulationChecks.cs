@@ -279,7 +279,7 @@ internal static partial class Program
         var picker = (ComboBox)window.FindName("DevicePicker");
         Check(picker.Items.Count == 0 && picker.SelectedItem is null && picker.Visibility == Visibility.Collapsed &&
             Label(window, "ConnectionText") == "No camera detected" &&
-            Label(window, "HelpText") == "Use a USB data cable and turn the camera on. If prompted, choose photo transfer or PC connection mode.",
+            Label(window, "HelpText") == "Use a USB data cable and turn the camera on. If prompted, choose photo transfer or PC connection mode. Choose an original Nikon NEF or JPEG, Fujifilm RAF, Sony ARW or JPEG, or Pentax PEF or DNG.",
             "An empty discovery clears the device picker and shows connection guidance");
         CheckClearedScanDashboard(window);
     }
@@ -376,6 +376,7 @@ internal static partial class Program
     {
         internal CameraDevice[] Devices { get; set; } = devices;
         internal int Scans { get; private set; }
+        internal Dictionary<string, uint> DeviceTypes { get; } = [];
 
         public void RefreshDeviceList() => Scans++;
 
@@ -400,6 +401,16 @@ internal static partial class Program
             }
             length = (uint)friendlyName.Length + 1;
             return 0;
+        }
+
+        public void GetDeviceDescription() => throw new NotSupportedException();
+        public void GetDeviceManufacturer() => throw new NotSupportedException();
+
+        public int GetDeviceProperty(string id, string property, ref uint value, ref uint size, out uint type)
+        {
+            Check(property == "PORTABLE_DEVICE_TYPE" && size == sizeof(uint), "Discovery requests the WPD device type");
+            type = 4;
+            return DeviceTypes.TryGetValue(id, out value) ? 0 : unchecked((int)0x80070002);
         }
     }
 }

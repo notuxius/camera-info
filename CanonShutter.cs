@@ -37,11 +37,15 @@ internal static class CanonShutter
             "32F7" => "R7",
             "32F8" => "R10",
             "32F9" => "M50 Mark II",
+            "32FC" => "R3",
+            "3303" => "R5 C",
             "330B" => "R6 Mark II",
             "330C" => "R8",
             "330D" => "R50",
             "3312" => "R100",
+            "3313" => "R1",
             "3314" => "R5 Mark II",
+            "3320" => "R50 V",
             "3323" => "R6 Mark III",
             _ => null
         };

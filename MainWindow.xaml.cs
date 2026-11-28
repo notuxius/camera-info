@@ -6,13 +6,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Navigation;
+using Microsoft.Win32;
 
 namespace CameraInspector;
 
 public partial class MainWindow : Window
 {
-    private static readonly string AppVersion = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
-
     private CameraReading? _reading;
     private ShutterComparison? _shutterComparison;
     private ShutterCount? _manual;
@@ -64,7 +63,6 @@ public partial class MainWindow : Window
         Language = XmlLanguage.GetLanguage(option.Culture.IetfLanguageTag);
         FlowDirection = option.Culture.TextInfo.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
         ConnectionText.Text = T(_connectionKey);
-        VersionText.Text = T("Version", AppVersion);
         if (ManualError.Visibility == Visibility.Visible)
             ManualError.Text = T("InvalidCount");
         ShowReading();
@@ -76,9 +74,58 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e) => await ScanAsync();
 
     private void OnAbout(object sender, RoutedEventArgs e) =>
-        AboutPanel.Visibility = AboutPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        new AboutWindow(_language, _messages) { Owner = this }.ShowDialog();
 
     private async void OnScan(object sender, RoutedEventArgs e) => await ScanAsync();
+
+    private async void OnOpenPhoto(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = T("OpenPhoto"),
+            Filter = "NEF, RAF, ARW, PEF, DNG, JPEG|*.nef;*.raf;*.arw;*.pef;*.dng;*.jpg;*.jpeg"
+        };
+        if (dialog.ShowDialog(this) == true)
+            await ReadPhotoAsync(dialog.FileName);
+    }
+
+    internal async Task ReadPhotoAsync(string path)
+    {
+        if (_busy)
+            return;
+
+        SetBusy(true);
+        SetConnection("OpeningPhoto");
+        try
+        {
+            var reading = await Task.Run(() => Path.GetExtension(path).ToLowerInvariant() switch
+            {
+                ".nef" => NikonNef.Read(path),
+                ".raf" => FujifilmRaf.Read(path),
+                ".arw" => SonyArw.Read(path),
+                ".pef" => PentaxRaw.Read(path, ReadingSource.Pef),
+                ".dng" => PentaxRaw.Read(path, ReadingSource.Dng),
+                ".jpg" or ".jpeg" => CameraJpeg.Read(path),
+                _ => throw new InvalidDataException("Unsupported photo file format.")
+            });
+            ResetManual();
+            _reading = reading;
+            _shutterComparison = null;
+            DevicePicker.SelectedItem = null;
+            ShowReading();
+            SetConnection("PhotoOpened", "Green");
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            SetConnection("PhotoOpenFailed");
+            SetHelpOverride("PhotoFormatsHelp");
+            Debug.WriteLine(error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
 
     private async Task ScanAsync()
     {
@@ -194,12 +241,20 @@ public partial class MainWindow : Window
         SerialValue.Text = _reading?.Serial ?? "—";
         FirmwareValue.Text = _reading?.Firmware ?? "—";
         BatteryValue.Text = _reading?.Battery is uint battery ? FormatLocalizedPercent(battery / 100m, "P0") : "—";
-        SourceValue.Text = _reading is null ? "—" : _manual is not null ? T("ManualCount") : "USB";
+        bool isPhoto = _reading is { Source: not ReadingSource.Usb };
+        string? photoFormat = _reading is { Source: ReadingSource.Usb, Count: null } ? PhotoFormatFor(_reading) : null;
+        SourceValue.Text = _reading is null ? "—" : _manual is not null ? T("ManualCount")
+            : _reading.Source.ToString().ToUpperInvariant();
         RatingLink.NavigateUri = rating is null ? null : new Uri(rating.Source);
         RatingLinkRow.Visibility = rating is null ? Visibility.Collapsed : Visibility.Visible;
 
         CountText.Text = count is { } value ? FormatCount(value.Value, value.IsUpperBound) : "—";
-        ReadingLabel.Text = T(count?.Kind == CountKind.Mechanical ? "MechanicalCount" : "ReportedCount");
+        ReadingLabel.Text = T(count?.Kind switch
+        {
+            CountKind.Mechanical => "MechanicalCount",
+            CountKind.Image => "ImageCount",
+            _ => "ReportedCount"
+        });
         RatingText.Text = rating is null ? T("NoRating") : T("Rating", rating.Cycles);
         PercentText.Text = usage is { } measured
             ? count is { HasRange: true } bound && rating is not null
@@ -222,15 +277,15 @@ public partial class MainWindow : Window
         });
         UpdateMarker();
 
-        UsageNote.Text = T(usage is not null
-            ? "UsageBenchmark"
-            : _reading is null
-                ? "UsageComparison"
-                : count?.Kind == CountKind.Unspecified
-                    ? "UsageUnspecified"
-                    : count is null
-                        ? "NoUsbCount"
-                        : "UsageNeedsRating");
+        UsageNote.Text = T((usage, _reading, count) switch
+        {
+            (not null, _, _) => "UsageBenchmark",
+            (_, null, _) => "UsageComparison",
+            (_, _, { Kind: CountKind.Unspecified }) => "UsageUnspecified",
+            (_, _, { Kind: CountKind.Image }) => "UsageImageCount",
+            (_, _, null) => isPhoto ? "PhotoCountUnavailable" : "NoUsbCount",
+            _ => "UsageNeedsRating"
+        });
         if (count is { HasRange: true } interval)
         {
             string rangeNote = T("CountRange", interval.LowerBound, interval.Value);
@@ -239,13 +294,38 @@ public partial class MainWindow : Window
         }
         ShowShutterHistory();
 
-        bool allowManual = rating is not null && _reading?.Count is not { Kind: CountKind.Mechanical, HasRange: false };
+        bool useFujifilmXApp = _reading?.Maker.StartsWith("Fujifilm", StringComparison.OrdinalIgnoreCase) == true;
+        bool allowManual = (rating is not null || useFujifilmXApp) &&
+            _reading?.Count is not { Kind: CountKind.Mechanical, HasRange: false };
         ManualPanel.Visibility = allowManual ? Visibility.Visible : Visibility.Collapsed;
         ClearCountButton.Visibility = _manual is null ? Visibility.Collapsed : Visibility.Visible;
         HelpTitle.Text = T(_reading is null ? "ConnectTitle"
-            : allowManual ? "ManualTitle" : "RefreshTitle");
-        HelpText.Text = _helpOverride is { } help ? T(help.Key, help.Argument)
-            : T(_reading is null ? "ConnectHelp" : allowManual ? "ManualHelp" : "RefreshHelp");
+            : allowManual && (photoFormat is null || useFujifilmXApp) ? "ManualTitle" : "RefreshTitle");
+        if (_helpOverride is { } help)
+            HelpText.Text = T(help.Key, help.Argument);
+        else if (_reading is null)
+            HelpText.Text = T("ConnectHelp") + " " + T("PhotoFormatsHelp");
+        else if (allowManual && useFujifilmXApp)
+            HelpText.Text = T("FujifilmManualHelp");
+        else if (photoFormat is not null)
+            HelpText.Text = T("UsbPhotoHelp", photoFormat) + (allowManual ? " " + T("ManualHelp") : "");
+        else
+            HelpText.Text = T(allowManual ? "ManualHelp" : isPhoto ? "PhotoReadingHelp" : "RefreshHelp");
+    }
+
+    private static string? PhotoFormatFor(CameraReading reading)
+    {
+        if (reading.Maker.StartsWith("Nikon", StringComparison.OrdinalIgnoreCase) &&
+            NikonNef.ModelName(reading.Model) is not null)
+            return "NEF / JPEG";
+        if (reading.Maker.StartsWith("Fujifilm", StringComparison.OrdinalIgnoreCase))
+            return "RAF";
+        if (reading.Maker.StartsWith("Sony", StringComparison.OrdinalIgnoreCase))
+            return "ARW / JPEG";
+        if (reading.Maker.StartsWith("Pentax", StringComparison.OrdinalIgnoreCase) ||
+            reading.Model.StartsWith("Pentax ", StringComparison.OrdinalIgnoreCase))
+            return "PEF / DNG";
+        return null;
     }
 
     private void ShowShutterHistory()
@@ -331,6 +411,7 @@ public partial class MainWindow : Window
     {
         _busy = busy;
         ScanButton.IsEnabled = !busy;
+        OpenPhotoButton.IsEnabled = !busy;
         DevicePicker.IsEnabled = !busy;
     }
 
@@ -358,11 +439,7 @@ public partial class MainWindow : Window
 
     private void OnOpenLink(object sender, RequestNavigateEventArgs e)
     {
-        e.Handled = true;
-        try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (System.ComponentModel.Win32Exception)
-        {
+        if (!App.TryOpenLink(e))
             SetHelpOverride("BrowserFailed", e.Uri.AbsoluteUri);
-        }
     }
 }

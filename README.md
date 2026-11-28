@@ -124,7 +124,9 @@ See the [backlog](BACKLOG.md) for validation and implementation plans.
 
 ### Wi-Fi scanning models
 
-Camera Inspector v0.9.0 passed its PTP/IP emulator checks. All models below are candidates for hardware testing. On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
+**Every model in this table is still untested on real hardware with Camera Inspector.** The v0.9.0 Wi-Fi scanning checks used a PTP/IP emulator.
+
+On compatible Canon EOS cameras, use **Connect to EOS Utility**. For other brands, enter the camera’s IPv4 address manually to try reading basic details such as model, firmware, and serial number. [Wi-Fi setup](#scan-over-wi-fi)
 
 | Brand and models | Wi-Fi evidence |
 | --- | --- |

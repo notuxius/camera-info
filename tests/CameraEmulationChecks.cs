@@ -20,7 +20,8 @@ internal static partial class Program
         Check(readOnly is { Model: "Canon EOS 5D Mark III", Serial: "EMULATED-123", Battery: null, Count: null },
             "Read-only fallback preserves metadata, rejects invalid battery levels, and skips shutter commands");
 
-        var withoutMetadata = new EmulatedCamera(Camera("323A"), Read(0x1015, Counter(0), 0xD1AC)) { MissingDetails = true }.Read();
+        var withoutMetadata = new EmulatedCamera(Camera("323A"), Read(0x1015, Counter(0), 0xD1AC),
+            Read(0x1004, Counter(0))) { MissingDetails = true }.Read();
         Check(withoutMetadata is { Model: "Canon EOS 5D Mark III", Maker: "Canon", Serial: null, Count: { Value: 0, Kind: CountKind.Mechanical } },
             "A known USB ID can read an exact zero without device metadata");
 
@@ -128,7 +129,9 @@ internal static partial class Program
     {
         var camera = Camera("32F7");
         var manager = new EmulatedDeviceManager(new(@"\\?\usb#vid_1234&pid_5678#emulated", "Portable music player"), camera);
-        var reads = new Queue<EmulatedCamera>([ReleaseCamera(camera, 101_000), ReleaseCamera(camera, 100_000)]);
+        var reads = new Queue<EmulatedCamera>([
+            ReleaseCamera(camera, 101_000, 0x1E, battery: 20), ReleaseCamera(camera, 100_000, 0)
+        ]);
         var window = new MainWindow(preferencePath, historyDirectory, () => WindowsCamera.Find(manager), device => reads.Dequeue().Read(device));
 
         RunScanCheck(window, async () =>
@@ -141,10 +144,15 @@ internal static partial class Program
             Check(manager.Scans == 1 && picker.Items.Count == 1 && Equals(picker.SelectedItem, camera) && reads.Count == 1,
                 "The scan discovers and selects the Canon camera and filters out the unrelated device");
             Check(Label(window, "ModelTitle") == "Canon EOS R7" && Label(window, "SerialValue") == "EMULATED-123" &&
-                Label(window, "FirmwareValue") == "1.3.6" && Label(window, "BatteryValue") == "72%" &&
+                Label(window, "FirmwareValue") == "1.3.6" && Label(window, "BatteryValue") == "20%" &&
                 Label(window, "ConnectionText") == "Connected over USB" && Label(window, "CountText") == "≤ 101,000" &&
                 Label(window, "ZoneText") == "Elevated usage" && Label(window, "ShutterHistoryText").Contains("bound of ≤ 101,000"),
                 "The scan displays USB status, metadata, mechanical bound, usage, and a history baseline");
+            Check(Label(window, "CameraErrorText") == "Possible Err 30 — shutter malfunction (0x0000001E)." &&
+                Label(window, "CameraErrorActionText") ==
+                    "Confirm the code on the camera display first. Turn the camera off and back on. If the error returns, note the code for Canon service." &&
+                Label(window, "CameraWarningsText") == "Low battery (20%).\nRecharge the battery or insert a charged spare.",
+                "The scan explains the camera error alongside the low battery warning");
 
             await ClickScanAsync(window);
             Check(manager.Scans == 2 && Equals(picker.SelectedItem, camera) && reads.Count == 0 &&
@@ -152,6 +160,11 @@ internal static partial class Program
                 Label(window, "ZoneText") == "Usage unavailable" &&
                 Label(window, "ShutterHistoryText") == "USB shutter count bound decreased from ≤ 101,000 to ≤ 100,000.",
                 "A rescan discovers the camera again and updates the dashboard and saved history");
+            Check(Label(window, "CameraErrorText") == "The camera reported no active error." &&
+                ((TextBlock)window.FindName("CameraErrorActionText")).Visibility == Visibility.Collapsed &&
+                Label(window, "CameraWarningsText") ==
+                    "A decrease was recorded in the USB shutter count.\nCompare with an earlier reading or service report for this camera.",
+                "A rescan clears the resolved warnings and shows the recorded shutter count decrease");
         });
         Console.WriteLine("End-to-end scan and rescan with an emulated camera passed.");
     }
@@ -175,7 +188,7 @@ internal static partial class Program
             foreach (LanguageOption option in picker.Items)
             {
                 picker.SelectedItem = option;
-                Check(Label(window, "ConnectionText") == Languages.Catalog(option)["NoCameraDetected"],
+                Check(Label(window, "ConnectionText") == Languages.Catalog(Languages.Resolve(option))["NoCameraDetected"],
                     $"An empty scan uses the generic message in {option.Code}");
             }
             picker.SelectedItem = original;
@@ -281,7 +294,10 @@ internal static partial class Program
         var picker = (ComboBox)window.FindName("DevicePicker");
         Check(picker.Items.Count == 0 && picker.SelectedItem is null && picker.Visibility == Visibility.Collapsed &&
             Label(window, "ConnectionText") == "No camera detected" &&
-            Label(window, "HelpText") == "Use a USB data cable and turn the camera on. If prompted, choose photo transfer or PC connection mode. Choose an original Nikon NEF or JPEG, Fujifilm RAF, Sony ARW or JPEG, or Pentax PEF or DNG.",
+            Label(window, "HelpText") == "Check that the camera is on and connected with a USB data cable. " +
+                "If prompted, choose photo transfer or PC connection mode. Select “Scan for cameras” again. " +
+                "If the camera still isn’t found, select “Open original photo”. " +
+                "Choose an original Nikon NEF or JPEG, Fujifilm RAF, Sony ARW or JPEG, or Pentax PEF or DNG.",
             "An empty discovery clears the device picker and shows connection guidance");
         CheckClearedScanDashboard(window);
     }
@@ -293,9 +309,10 @@ internal static partial class Program
             Label(window, "ZoneText") == "Awaiting camera" && Label(window, "PercentText") == "",
             "The dashboard clears the prior metadata, count and usage");
         Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed &&
+            ((Border)window.FindName("CameraIssuesPanel")).Visibility == Visibility.Collapsed &&
             ((StackPanel)window.FindName("ManualPanel")).Visibility == Visibility.Collapsed &&
             ((Button)window.FindName("ScanButton")).IsEnabled,
-            "The dashboard hides history and manual entry and re-enables scanning");
+            "The dashboard hides issues, history, and manual entry and re-enables scanning");
     }
 
     private static void RunScanCheck(MainWindow window, Func<Task> checkScan)
@@ -334,9 +351,9 @@ internal static partial class Program
 
     private static CameraReading EmulateRelease(string id, uint count) => ReleaseCamera(Camera(id), count).Read();
 
-    private static EmulatedCamera ReleaseCamera(CameraDevice camera, uint count) => new(camera,
+    private static EmulatedCamera ReleaseCamera(CameraDevice camera, uint count, uint? errorCode = null, uint battery = 72) => new(camera,
         Read(0x1015, Counter(9_000), 0xD1AC), Control(0x9114, 1), Control(0x9115, 1), Read(0x9108, []),
-        Read(0x9116, ReleaseEvent(count)), Control(0x9115, 0), Control(0x9114, 0));
+        Read(0x9116, ReleaseEvent(count, errorCode)), Control(0x9115, 0), Control(0x9114, 0)) { Battery = battery };
 
     private static CameraDevice Camera(string id) => new($@"\\?\usb#vid_04a9&pid_{id}#emulated", "Canon Digital Camera");
 
@@ -363,14 +380,16 @@ internal static partial class Program
         return data;
     }
 
-    private static byte[] ReleaseEvent(uint count)
+    private static byte[] ReleaseEvent(uint count, uint? errorCode = null)
     {
-        var data = new byte[28];
+        var data = new byte[errorCode.HasValue ? 44 : 28];
         WriteRecord(data, 0xD167, 16);
         BinaryPrimitives.WriteUInt32LittleEndian(data, 28);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(16), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(20), count);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(24), count + 31_000);
+        if (errorCode is uint code)
+            WriteRecord(data.AsSpan(28), 0xD1C4, code);
         return data;
     }
 

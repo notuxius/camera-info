@@ -16,13 +16,15 @@ internal static partial class Program
         Check(devices.Select(device => device.Name).SequenceEqual(["Nikon D850", "Nikon D750", "Nikon Z 7"]),
             "Discovery includes Nikon DSLRs and Z bodies");
 
-        var reading = new EmulatedCamera(d850) { Model = "D850", Maker = " Nikon Corporation " }.Read(devices[0]);
-        Check(reading is { Model: "Nikon D850", Maker: "Nikon Corporation", Serial: "EMULATED-123", Battery: 72, Count: null, Source: ReadingSource.Usb },
-            "Nikon USB reads Windows metadata without issuing Canon commands");
-        Check(new EmulatedCamera(d750) { MissingDetails = true }.Read(devices[1]) is { Model: "Nikon D750", Maker: "Nikon", Count: null },
+        var reading = new EmulatedCamera(d850, Read(0x1015, [1], 0xD1B2)) { Model = "D850", Maker = " Nikon Corporation " }.Read(devices[0]);
+        Check(reading is { Model: "Nikon D850", Maker: "Nikon Corporation", Serial: "EMULATED-123", Battery: 72, Count: null,
+            Source: ReadingSource.Usb, DeviceErrorCode: 1, ErrorSource: CameraErrorSource.NikonDisplay },
+            "Nikon USB reads Windows metadata and the camera's error indicator");
+        Check(new EmulatedCamera(d750, Read(0x1004, Counter(0))) { MissingDetails = true }.Read(devices[1]) is
+            { Model: "Nikon D750", Maker: "Nikon", Count: null, StorageIssues: null },
             "Nikon USB retains the identified model when Windows metadata is unavailable");
-        Check(new EmulatedCamera(next) { Model = "Z 7", Maker = "Nikon" }.Read(devices[2]) is { Model: "Nikon Z 7", Count: null },
-            "Nikon Z reports Windows metadata without issuing Canon commands");
+        Check(new EmulatedCamera(next, Read(0x1015, [0, 0], 0xD1B2)) { Model = "Z 7", Maker = "Nikon" }.Read(devices[2]) is
+            { Model: "Nikon Z 7", Count: null, DeviceErrorCode: null }, "An unfamiliar Nikon error payload stays unavailable");
         Check(CameraRatings.For("Nikon D850") is { Cycles: 200_000 } &&
               CameraRatings.For("Nikon D3500") is null && CameraRatings.For("Nikon Z 7") is { Cycles: 200_000 } &&
               CameraRatings.For("Nikon Z 50II") is { Cycles: 100_000 } && CameraRatings.For("Nikon Z 9") is null,
@@ -49,7 +51,9 @@ internal static partial class Program
         RunScanCheck(window, async () =>
         {
             window.ShowUsbReading(new("Nikon D850", "Nikon", "1", "1.00", 72, null), null);
-            Check(Label(window, "HelpText").Contains("Open an original NEF"), "Nikon USB shows where to read the shutter count");
+            Check(Label(window, "HelpText").StartsWith("Select “Scan for cameras” to refresh camera details over USB. " +
+                "For the shutter count, select “Open original photo” and choose a recent original NEF / JPEG photo from this camera.",
+                StringComparison.Ordinal), "Nikon USB distinguishes rescanning camera details from opening a photo for the count");
 
             await window.ReadPhotoAsync(mechanical);
             Check(Label(window, "ModelTitle") == "Nikon D850" && Label(window, "SerialValue") == "00012345" &&
@@ -59,6 +63,9 @@ internal static partial class Program
             Check(Label(window, "CountText") == "100,001" && Label(window, "ReadingLabel") == "Mechanical shutter count" &&
                 Label(window, "ZoneText") == "Elevated usage" && ((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed,
                 "The mechanical MakerNote takes precedence and leaves live USB history separate");
+            Check(Label(window, "HelpText") == "Connect your camera by USB and select “Scan for cameras” to see what it reports. " +
+                "To update a photo-based reading, select “Open original photo” and choose a newer original photo from the same camera.",
+                "A photo-based reading explains when to rescan or choose a newer photo");
             if (renderFolder is not null)
                 Render((Grid)window.FindName("Dashboard"), renderFolder, "nikon-nef");
 

@@ -6,6 +6,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
 {
     private static readonly Guid Client = new("204d9f0c-2292-4080-9f42-40664e70f859");
     private static readonly Guid Device = new("26d4979a-e643-4626-9e2b-736dc0c92fdc");
+    private static readonly Guid StorageCategory = new("01a3057a-74d6-4e80-bea7-dc4c212ce50a");
     private static readonly Guid Common = new("f0422a9c-5dc8-4440-b5bd-5df28835658a");
     private static readonly Guid Mtp = new("4d545058-1a2e-4106-a357-771e0819fc56");
     private static readonly Guid ValuesClass = new("0c15d503-d017-47ce-9016-7b3f978721cc");
@@ -24,6 +25,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
     internal string? Model { get; init; } = " Canon Digital Camera ";
     internal string Maker { get; init; } = " Canon ";
     internal uint Battery { get; init; } = 72;
+    internal EmulatedStorage[] Storage { get; init; } = [new(4, 0, 1024, 512)];
     internal bool ReadOnly { get; init; }
     internal bool MissingDetails { get; init; }
     internal Action? BeforeOpen { get; init; }
@@ -80,7 +82,21 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
 
     public void GetValues(string objectId, IPortableDeviceKeyCollection keys, out IPortableDeviceValues values)
     {
-        Require(objectId == "DEVICE", "metadata object ID");
+        if (objectId != "DEVICE")
+        {
+            Require(int.TryParse(objectId, out int index) && index >= 0 && index < Storage.Length, "storage object ID");
+            var storage = Storage[index];
+            if (storage.Error != 0)
+                throw new COMException("Emulated storage read failed.", storage.Error);
+            values = NewValues();
+            values.SetUnsignedIntegerValue(new(StorageCategory, 2), storage.Type);
+            values.SetUnsignedIntegerValue(new(StorageCategory, 11), storage.Access);
+            if (storage.Capacity is ulong capacity)
+                values.SetUnsignedLargeIntegerValue(new(StorageCategory, 4), capacity);
+            if (storage.Free is ulong free)
+                values.SetUnsignedLargeIntegerValue(new(StorageCategory, 5), free);
+            return;
+        }
         values = NewValues();
         if (Model is not null)
             values.SetStringValue(new(Device, 8), Model);
@@ -134,7 +150,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
             Require(argument.Type == 19 && argument.Value == next.Arguments[i], $"argument {i} for 0x{opcode:X4}");
         }
 
-        if (command == 12)
+        if (command == 12 || next.ResponseBeforeData)
         {
             output.SetUnsignedIntegerValue(new(Mtp, 1003), next.Response);
             return;
@@ -209,9 +225,26 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
 
     public void Capabilities() => throw new NotSupportedException();
     public void Cancel() => throw new NotSupportedException();
-    public void EnumObjects() => throw new NotSupportedException();
+    public void EnumObjects(uint flags, string parentId, IPortableDeviceValues? filter, out IEnumPortableDeviceObjectIDs enumeration)
+    {
+        Require(_opened && flags == 0 && parentId == "DEVICE" && filter is null, "enumeration requests only root objects");
+        enumeration = new StorageIds(Storage.Length);
+    }
     public void GetSupportedProperties() => throw new NotSupportedException();
     public void GetPropertyAttributes() => throw new NotSupportedException();
+
+    private sealed class StorageIds(int length) : IEnumPortableDeviceObjectIDs
+    {
+        private int _index;
+
+        public void Next(uint count, out IntPtr id, out uint fetched)
+        {
+            if (count != 1)
+                throw new InvalidOperationException("Expected a single object ID.");
+            fetched = _index < length ? 1u : 0u;
+            id = fetched == 0 ? IntPtr.Zero : Marshal.StringToCoTaskMemUni((_index++).ToString());
+        }
+    }
 
     private static IPortableDeviceValues NewValues() =>
         (IPortableDeviceValues)Activator.CreateInstance(Type.GetTypeFromCLSID(ValuesClass, throwOnError: true)!)!;
@@ -223,9 +256,12 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
     }
 }
 
+internal sealed record EmulatedStorage(uint Type, uint Access, ulong? Capacity, ulong? Free, int Error = 0);
+
 internal sealed record CameraExchange(uint Command, uint Opcode, uint[] Arguments, byte[] Data)
 {
     internal uint Response { get; init; } = 0x2001;
+    internal bool ResponseBeforeData { get; init; }
     internal ulong? AnnouncedSize { get; init; }
     internal int ChunkSize { get; init; } = int.MaxValue;
     internal int ReadError { get; init; }

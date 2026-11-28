@@ -14,6 +14,8 @@ internal sealed record LanguageOption(string Code, string Name, string CultureNa
 
 internal static class Languages
 {
+    internal static LanguageOption System { get; } = new("system", "System", "");
+
     internal static IReadOnlyList<LanguageOption> Options { get; } =
     [
         new("ar", "العربية", "ar-SA"),
@@ -43,15 +45,29 @@ internal static class Languages
         return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
     }
 
+    internal static LanguageOption Resolve(LanguageOption preference)
+    {
+        if (preference != System)
+            return preference;
+
+        for (var culture = CultureInfo.CurrentUICulture; culture.Name.Length > 0; culture = culture.Parent)
+        {
+            var match = Options.FirstOrDefault(option => option.Code.Equals(culture.Name, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+                return match;
+        }
+        return Options.Single(option => option.Code == "en");
+    }
+
     internal static LanguageOption ReadPreference(string path)
     {
-        string code = "en";
+        string code = System.Code;
         try { code = File.ReadAllText(path).Trim(); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             Debug.WriteLine(error);
         }
-        return Options.FirstOrDefault(option => option.Code == code) ?? Options.Single(option => option.Code == "en");
+        return Options.FirstOrDefault(option => option.Code == code) ?? System;
     }
 
     internal static void SavePreference(string path, LanguageOption option) => PreferenceFile.Write(path, option.Code);

@@ -7,6 +7,13 @@ internal sealed record CameraDevice(string Id, string? Name)
 
 internal enum CountKind { Mechanical, Unspecified, Image }
 internal enum ReadingSource { Usb, Nef, Raf, Arw, Pef, Dng, Jpeg }
+internal enum CameraErrorSource { CanonEos, NikonDisplay, FujifilmDevice, SonyTemperature }
+
+[Flags]
+internal enum CameraStorageIssues
+{
+    None = 0, Full = 1, ReadOnly = 2, Unavailable = 4, Busy = 8, Unformatted = 16, AccessError = 32
+}
 
 internal readonly record struct ShutterCount(uint Value, CountKind Kind, uint? UsbProperty = null, bool IsUpperBound = false)
 {
@@ -16,7 +23,8 @@ internal readonly record struct ShutterCount(uint Value, CountKind Kind, uint? U
 
 internal sealed record CameraReading(
     string Model, string Maker, string? Serial, string? Firmware, uint? Battery, ShutterCount? Count,
-    ReadingSource Source = ReadingSource.Usb);
+    ReadingSource Source = ReadingSource.Usb, uint? DeviceErrorCode = null,
+    CameraErrorSource ErrorSource = CameraErrorSource.CanonEos, CameraStorageIssues? StorageIssues = null);
 
 internal sealed record CameraRating(uint Cycles, string Source);
 

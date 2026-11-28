@@ -15,6 +15,7 @@ internal static partial class Program
     private static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
         var rating = CameraRatings.For("Canon EOS R6 Mark II") ?? throw new Exception("Missing Canon rating.");
         Check(rating.Cycles == 400_000, "R6 Mark II has its own rating");
         Check(CameraRatings.For("Canon EOS R5 C") is null, "Similar model names do not inherit ratings");
@@ -31,22 +32,79 @@ internal static partial class Program
         Task.Run(CheckCameraEmulation).GetAwaiter().GetResult();
         Task.Run(CheckNikonUsb).GetAwaiter().GetResult();
         Task.Run(CheckAdditionalUsbCameras).GetAwaiter().GetResult();
+        CheckCompanionApps();
 
         int cameras = Task.Run(() => WindowsCamera.Find().Count).GetAwaiter().GetResult();
         Console.WriteLine($"Windows USB discovery completed with {cameras} supported camera(s).");
 
-        var app = new App();
+        var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.InitializeComponent();
         var folder = Directory.CreateTempSubdirectory("camera-inspector-language-");
         try
         {
-            CheckDashboard(rating, Path.Combine(folder.FullName, "language.txt"), args.Length == 1 ? args[0] : null);
+            string preferencePath = Path.Combine(folder.FullName, "language.txt");
+            string? renderFolder = args.Length == 1 ? args[0] : null;
+            CheckThemes(app, preferencePath, Path.Combine(folder.FullName, "theme.txt"), renderFolder);
+            CheckSystemLanguage(Path.Combine(folder.FullName, "system-language.txt"));
+            CheckDashboard(rating, preferencePath, renderFolder);
         }
         finally
         {
             folder.Delete(recursive: true);
         }
         Console.WriteLine("All camera checks passed.");
+    }
+
+    private static void CheckThemes(App app, string languagePath, string themePath, string? renderFolder)
+    {
+        app.LoadThemePreference(themePath);
+        var window = new MainWindow(languagePath);
+        var dialog = window.CreateSettingsWindow();
+        var picker = (ComboBox)dialog.FindName("ThemePicker");
+        var systemBackground = ((SolidColorBrush)window.Background).Color;
+        Check((AppTheme)picker.SelectedItem == AppTheme.System && !File.Exists(themePath), "Theme defaults to System");
+
+        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 2 }, null);
+        var zone = (TextBlock)window.FindName("ZoneText");
+        var error = (TextBlock)window.FindName("CameraErrorText");
+        var dot = (System.Windows.Shapes.Ellipse)window.FindName("ConnectionDot");
+        var scan = (Button)window.FindName("ScanButton");
+        var manualCount = (TextBox)window.FindName("ManualCount");
+        var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
+        var devicePicker = (ComboBox)window.FindName("DevicePicker");
+        foreach (var (theme, background) in new[] { (AppTheme.Light, "#F2F7FB"), (AppTheme.Dark, "#0E2234") })
+        {
+            picker.SelectedItem = theme;
+            Check(window.Background == dialog.Background && ((SolidColorBrush)window.Background).Color == (Color)ColorConverter.ConvertFromString(background),
+                $"Both windows switch to {theme} immediately");
+            Check(zone.Foreground == app.FindResource("Yellow") && error.Foreground == app.FindResource("Red") && dot.Fill == app.FindResource("Green"),
+                $"The current camera reading and status adopt the {theme} palette");
+            Check(scan.Background == manualCount.SelectionBrush && ((SolidColorBrush)scan.Background).Color == Color.FromRgb(0x23, 0x99, 0xB6) &&
+                scan.BorderBrush == picker.BorderBrush && picker.BorderBrush == devicePicker.BorderBrush && devicePicker.BorderBrush == manualCount.BorderBrush &&
+                supportedCameras.Foreground == manualCount.CaretBrush && manualCount.CaretBrush == app.FindResource("Accent"),
+                $"Buttons, inputs, and links adopt the {theme} palette");
+            Check(File.ReadAllText(themePath) == theme.ToString(), $"The {theme} preference is saved");
+            if (renderFolder is not null)
+            {
+                Render((Grid)window.FindName("Dashboard"), renderFolder, $"theme-{theme}-dashboard");
+                var content = (Grid)dialog.Content;
+                content.Measure(new Size(content.Width, double.PositiveInfinity));
+                Render(content, renderFolder, $"theme-{theme}-settings", content.Width, Math.Ceiling(content.DesiredSize.Height));
+            }
+        }
+
+        app.LoadThemePreference(themePath);
+        var restored = window.CreateSettingsWindow();
+        Check((AppTheme)((ComboBox)restored.FindName("ThemePicker")).SelectedItem == AppTheme.Dark, "The saved theme is restored");
+        restored.Close();
+        picker.SelectedItem = AppTheme.System;
+        Check(((SolidColorBrush)window.Background).Color == systemBackground && File.ReadAllText(themePath) == "System",
+            "Selecting System restores and saves the Windows app theme");
+        File.WriteAllText(themePath, "unknown");
+        app.LoadThemePreference(themePath);
+        Check(app.PreferredTheme == AppTheme.System, "An unknown saved theme falls back to System");
+        dialog.Close();
+        window.Close();
     }
 
     private static void CheckDashboard(CameraRating rating, string preferencePath, string? renderFolder)
@@ -72,9 +130,23 @@ internal static partial class Program
             window.ShowUsbReading(ExampleReading(count), null);
             Check(Label(window, "ZoneText") == zone && Label(window, "CountText") == count.ToString("N0"), "Dashboard renders the correct usage status");
             Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed, "A reading without a USB counter property hides history");
+            Check(Label(window, "CameraErrorText") == "Internal camera error status unavailable." &&
+                Label(window, "CameraWarningsText") == (zone == "High usage"
+                    ? "High shutter usage (110.0% of the durability rating).\nIf the shutter misfires, have the camera inspected." : ""),
+                "Only high shutter usage produces a warning, and a missing error field stays unavailable");
             if (renderFolder is not null)
                 Render(dashboard, renderFolder, zone.Split(' ')[0].ToLowerInvariant());
         }
+        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 2 }, null);
+        Check(Label(window, "CameraErrorText") == "Possible Err 02 — the camera could not access the memory card (0x00000002)." &&
+            Label(window, "CameraErrorActionText") ==
+                "Confirm the code on the camera display first. If you use a memory card, turn the camera off and reinsert it or try a compatible spare. Reconnect and rescan.",
+            "Single-digit Canon errors use the on-camera number format and get targeted advice");
+        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 0xFFFF001E }, null);
+        Check(Label(window, "CameraErrorText") == "Unknown camera error (0xFFFF001E). Check the camera display for details." &&
+            Label(window, "CameraErrorActionText") == "Follow any instructions shown there. If the error returns, save the code or message for support.",
+            "An unknown value keeps all its bits and shows generic support advice");
+        CheckCameraStatusDashboard(window, renderFolder);
         CheckLanguages(window, preferencePath, renderFolder);
     }
 
@@ -85,15 +157,20 @@ internal static partial class Program
         FlowDirection direction, string? renderFolder)
     {
         var languageLabel = (Label)dialog.FindName("LanguageLabel");
+        var themeLabel = (Label)dialog.FindName("ThemeLabel");
+        var themePicker = (ComboBox)dialog.FindName("ThemePicker");
         var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
         var checkForUpdates = (Hyperlink)dialog.FindName("CheckForUpdatesLink");
         var close = (Button)dialog.FindName("CloseButton");
         string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
         Check(dialog.Title == catalog["Settings"] && dialog.FlowDirection == direction &&
             (string)languageLabel.Content == catalog["LanguageLabel"], $"Settings updates to {option.Code} while open");
+        Check((string)themeLabel.Content == catalog["ThemeLabel"] && SelectedDropdownText(themePicker) == catalog["SystemOption"],
+            $"The theme label and current choice update to {option.Code}");
         Check(Label(dialog, "AboutHeading") == catalog["About"] &&
+            Label(dialog, "AboutDescription") == catalog["CameraDiagnostics"] &&
             Label(dialog, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
-            $"About shows the app version and uses the selected language ({option.Code})");
+            $"About localizes the heading, description, and app version ({option.Code})");
         Check(close.IsCancel && (string)close.Content == catalog["Close"], $"Settings has a localized Close button ({option.Code})");
         Check(supportedCameras.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector#brand-support-backlog" &&
             ((Run)supportedCameras.Inlines.FirstInline).Text == catalog["SupportedCameras"],
@@ -109,22 +186,72 @@ internal static partial class Program
         }
     }
 
+    private static string SelectedDropdownText(ComboBox picker)
+    {
+        picker.ApplyTemplate();
+        var selection = (ContentPresenter)picker.Template.FindName("Selection", picker);
+        selection.ApplyTemplate();
+        return ((TextBlock)picker.ItemTemplate.FindName("ChoiceName", selection)).Text;
+    }
+
+    private static void CheckSystemLanguage(string preferencePath)
+    {
+        var originalCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("fr-CA");
+            var window = new MainWindow(preferencePath);
+            var dialog = window.CreateSettingsWindow();
+            var picker = (ComboBox)dialog.FindName("LanguagePicker");
+            var french = Languages.Catalog(Languages.Options.Single(option => option.Code == "fr"));
+            Check((LanguageOption)picker.SelectedItem == Languages.System && !File.Exists(preferencePath) &&
+                dialog.Title == french["Settings"] && SelectedDropdownText(picker) == french["SystemOption"],
+                "A fresh install follows the display language and localizes the System choice");
+
+            var english = Languages.Options.Single(option => option.Code == "en");
+            picker.SelectedItem = english;
+            Check(dialog.Title == "Settings" && Languages.ReadPreference(preferencePath) == english,
+                "An explicit language choice overrides the Windows display language");
+            picker.SelectedItem = Languages.System;
+            Check(dialog.Title == french["Settings"] && File.ReadAllText(preferencePath) == "system",
+                "Returning to System applies the Windows language and saves the System preference");
+            dialog.Close();
+            window.Close();
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("ar-EG");
+            var restored = new MainWindow(preferencePath);
+            var restoredDialog = restored.CreateSettingsWindow();
+            Check((LanguageOption)((ComboBox)restoredDialog.FindName("LanguagePicker")).SelectedItem == Languages.System &&
+                restored.FlowDirection == FlowDirection.RightToLeft && restoredDialog.FlowDirection == FlowDirection.RightToLeft,
+                "A saved System preference follows the new display language on reopening");
+            restoredDialog.Close();
+            restored.Close();
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("it-IT");
+            Check(Languages.Resolve(Languages.ReadPreference(preferencePath)) == english, "An unsupported Windows display language falls back to English");
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
     private static void CheckLanguages(MainWindow window, string preferencePath, string? renderFolder)
     {
         var dialog = window.CreateSettingsWindow();
         var picker = (ComboBox)dialog.FindName("LanguagePicker");
-        var english = (LanguageOption)picker.SelectedItem;
+        var english = Languages.Options.Single(option => option.Code == "en");
         var original = Languages.Catalog(english);
         var settingsButton = (Button)window.FindName("SettingsButton");
         Check(window.FindName("LanguagePicker") is null && window.FindName("AboutButton") is null,
             "Settings replaces the dashboard language picker and About button");
-        Check(english.Code == "en", "No saved language defaults to English");
+        Check((LanguageOption)picker.SelectedItem == Languages.System, "The picker defaults to System");
         Check(string.Join(" ", picker.Items.Cast<LanguageOption>().Select(option => option.Code)) ==
-            "ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "Picker matches Relf's 16 languages");
+            "system ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "The picker lists System and all 16 translations");
 
-        foreach (LanguageOption option in picker.Items)
+        foreach (LanguageOption option in Languages.Options)
         {
-            window.ShowUsbReading(ExampleReading(87_000), null);
+            window.ShowUsbReading(ExampleReading(87_000) with { Battery = 20, DeviceErrorCode = 0x1E }, null);
             var catalog = Languages.Catalog(option);
             Check(original.Keys.ToHashSet().SetEquals(catalog.Keys), $"{option.Code} has all messages");
             foreach (var (key, message) in catalog)
@@ -140,6 +267,16 @@ internal static partial class Program
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
             Check((string)((Button)window.FindName("OpenPhotoButton")).Content == catalog["OpenPhoto"], "The photo button updates on language selection");
             Check((string)settingsButton.Content == catalog["Settings"], $"The Settings button updates to {option.Code}");
+            Check(Label(window, "CompanionHeading") == catalog["CompanionApps"] &&
+                Label(window, "CompanionPurpose") == catalog["CompanionPhotoTransfer"] &&
+                ((Run)((Hyperlink)window.FindName("CompatibilityLink")).Inlines.FirstInline).Text == catalog["CheckAppCompatibility"],
+                $"Companion app labels update to {option.Code}");
+            Check(Label(window, "CameraIssuesHeading") == catalog["CameraIssues"] &&
+                Label(window, "CameraErrorText") == string.Format(option.Culture, catalog["CameraErrorMatch"], "30", catalog["CanonError30"], "0x0000001E") &&
+                Label(window, "CameraErrorActionText") == string.Format(option.Culture, catalog["FixConfirmCanonCode"], catalog["FixRestartCanon"]) &&
+                Label(window, "CameraWarningsText") ==
+                    string.Format(option.Culture, catalog["IssueLowBattery"], Label(window, "BatteryValue")) + "\n" + catalog["FixChargeBattery"],
+                $"Camera issues and their next steps update to {option.Code}");
             CheckSettings(dialog, option, catalog, direction, renderFolder);
             Check(Label(window, "ConnectionText") == catalog["UsbConnected"] &&
                 Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the USB reading");
@@ -178,7 +315,7 @@ internal static partial class Program
             "A localized manual count and USB history survive switching languages");
 
         File.WriteAllText(preferencePath, "unknown");
-        Check(Languages.ReadPreference(preferencePath) == english, "An unknown saved language falls back to English");
+        Check(Languages.ReadPreference(preferencePath) == Languages.System, "An unknown saved language falls back to System");
         dialog.Close();
     }
 
@@ -203,18 +340,23 @@ internal static partial class Program
         Convert.FromHexString("1000000001000000a00f0000b8880000").CopyTo(records, 60);
         BinaryPrimitives.WriteUInt32LittleEndian(records.AsSpan(76), uint.MaxValue);
 
-        var legacy = new CanonShutterEvents(CanonCounterProtocol.Legacy);
+        var legacy = new CanonEosEvents(CanonCounterProtocol.Legacy);
         legacy.Parse(records);
         Check(legacy.Result is { Value: 0, Kind: CountKind.Mechanical, HasRange: false }, "Legacy zero stays valid");
-        var modern = new CanonShutterEvents(CanonCounterProtocol.ReleaseEvent);
+        var modern = new CanonEosEvents(CanonCounterProtocol.ReleaseEvent);
         modern.Parse(records);
         Check(modern.Result is { Value: 4_000, LowerBound: 3_001, Kind: CountKind.Mechanical }, "Mechanical release bound takes precedence over scalar fallbacks");
-        var unknown = new CanonShutterEvents(CanonCounterProtocol.Unknown);
+        var unknown = new CanonEosEvents(CanonCounterProtocol.Unknown);
         unknown.Parse(records);
         Check(unknown.Result is { Kind: CountKind.Unspecified }, "A structured value for an unlisted body is not labeled mechanical");
-        var scalarOnly = new CanonShutterEvents(CanonCounterProtocol.ReleaseEvent);
+        var scalarOnly = new CanonEosEvents(CanonCounterProtocol.ReleaseEvent);
         scalarOnly.Parse(records.AsSpan(16, 16));
         Check(scalarOnly.Result is { Value: 87_000, Kind: CountKind.Unspecified }, "A legacy scalar release stays ambiguous on a modern body");
+        Span<byte> malformedError = stackalloc byte[20];
+        WriteRecord(malformedError, 0xD1C4, 0x1E);
+        BinaryPrimitives.WriteUInt32LittleEndian(malformedError, (uint)malformedError.Length);
+        modern.Parse(malformedError);
+        Check(modern.DeviceErrorCode is null, "An unfamiliar error payload stays unavailable");
         Span<byte> highLegacyRecord = stackalloc byte[16];
         WriteRecord(highLegacyRecord, CanonShutter.LegacyProperty, 301_123);
         legacy.Parse(highLegacyRecord);

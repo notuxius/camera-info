@@ -46,8 +46,15 @@ internal interface IPortableDevice
 [ComImport, Guid("6a96ed84-7c73-4480-9938-bf5af477d426"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IPortableDeviceContent
 {
-    void EnumObjects();
+    void EnumObjects(uint flags, [MarshalAs(UnmanagedType.LPWStr)] string parentId, IPortableDeviceValues? filter,
+        out IEnumPortableDeviceObjectIDs enumeration);
     void Properties(out IPortableDeviceProperties properties);
+}
+
+[ComImport, Guid("10ece955-cf41-4728-bfa0-41eedf1bbf19"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IEnumPortableDeviceObjectIDs
+{
+    void Next(uint count, out IntPtr id, out uint fetched);
 }
 
 [ComImport, Guid("7f6d695c-03df-4439-a809-59266beee3a6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

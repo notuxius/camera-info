@@ -49,6 +49,8 @@ internal static partial class CameraIdentity
         };
     }
 
+    internal static string UsbVendor(string id) => UsbId().Match(id).Groups[1].Value.ToLowerInvariant();
+
     [GeneratedRegex(@"vid_([0-9a-f]{4})&pid_[0-9a-f]{4}(?![0-9a-f])", RegexOptions.IgnoreCase)]
     private static partial Regex UsbId();
 }

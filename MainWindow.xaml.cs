@@ -4,9 +4,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Markup;
 using System.Windows.Navigation;
 using Microsoft.Win32;
+using Shape = System.Windows.Shapes.Shape;
 
 namespace CameraInspector;
 
@@ -24,6 +26,7 @@ public partial class MainWindow : Window
     private readonly string _historyDirectory;
     private readonly Func<List<CameraDevice>> _findCameras;
     private readonly Func<CameraDevice, CameraReading> _readCamera;
+    private LanguageOption _languagePreference = Languages.System;
     private LanguageOption _language = null!;
     private IReadOnlyDictionary<string, string> _messages = null!;
 
@@ -50,8 +53,10 @@ public partial class MainWindow : Window
         return _messages;
     }
 
-    private void SetLanguage(LanguageOption option)
+    private void SetLanguage(LanguageOption preference)
     {
+        _languagePreference = preference;
+        var option = Languages.Resolve(preference);
         _language = option;
         _messages = Languages.Catalog(option);
         foreach (var (key, message) in _messages)
@@ -79,7 +84,7 @@ public partial class MainWindow : Window
         }
     }
 
-    internal SettingsWindow CreateSettingsWindow() => new(_language, _messages, ChangeLanguage);
+    internal SettingsWindow CreateSettingsWindow() => new(_languagePreference, _messages, ChangeLanguage);
 
     private void OnSettings(object sender, RoutedEventArgs e)
     {
@@ -280,7 +285,7 @@ public partial class MainWindow : Window
             UsageZone.High => "HighUsage",
             _ => _reading is null ? "AwaitingCamera" : "NoUsage"
         });
-        ZoneText.Foreground = (System.Windows.Media.Brush)FindResource(usage?.Zone switch
+        ZoneText.SetResourceReference(TextBlock.ForegroundProperty, usage?.Zone switch
         {
             UsageZone.Low => "Green",
             UsageZone.Elevated => "Yellow",
@@ -305,9 +310,13 @@ public partial class MainWindow : Window
                 : usage is null ? " " + T("RangeSpansZones") : "");
         }
         ShowShutterHistory();
+        ShowCameraIssues(usage);
 
-        bool useFujifilmXApp = _reading?.Maker.StartsWith("Fujifilm", StringComparison.OrdinalIgnoreCase) == true;
-        bool allowManual = (rating is not null || useFujifilmXApp) &&
+        var companionApp = CompanionApps.For(_reading);
+        ShowCompanionApp(companionApp);
+        bool useFujifilmXApp = companionApp is { HasMechanicalCount: true };
+        bool isFujifilm = _reading?.Maker.StartsWith("Fujifilm", StringComparison.OrdinalIgnoreCase) == true;
+        bool allowManual = (rating is not null || isFujifilm) &&
             _reading?.Count is not { Kind: CountKind.Mechanical, HasRange: false };
         ManualPanel.Visibility = allowManual ? Visibility.Visible : Visibility.Collapsed;
         ClearCountButton.Visibility = _manual is null ? Visibility.Collapsed : Visibility.Visible;
@@ -316,13 +325,32 @@ public partial class MainWindow : Window
         if (_helpOverride is { } help)
             HelpText.Text = T(help.Key, help.Argument);
         else if (_reading is null)
-            HelpText.Text = T("ConnectHelp") + " " + T("PhotoFormatsHelp");
+            HelpText.Text = T("ConnectHelp", T("Scan"), T("OpenPhoto")) + " " + T("PhotoFormatsHelp");
         else if (allowManual && useFujifilmXApp)
             HelpText.Text = T("FujifilmManualHelp");
         else if (photoFormat is not null)
-            HelpText.Text = T("UsbPhotoHelp", photoFormat) + (allowManual ? " " + T("ManualHelp") : "");
+            HelpText.Text = T("UsbPhotoHelp", photoFormat, T("Scan"), T("OpenPhoto")) +
+                (allowManual ? " " + T("ManualHelp") : "");
         else
-            HelpText.Text = T(allowManual ? "ManualHelp" : isPhoto ? "PhotoReadingHelp" : "RefreshHelp");
+            HelpText.Text = allowManual ? T("ManualHelp") : T("RefreshHelp", T("Scan"), T("OpenPhoto"));
+    }
+
+    private void ShowCompanionApp(CompanionApp? app)
+    {
+        CompanionPanel.Visibility = app is null ? Visibility.Collapsed : Visibility.Visible;
+        CompanionAppName.Text = app?.Name ?? "";
+        CompanionAppName.Visibility = app?.Name is null ? Visibility.Collapsed : Visibility.Visible;
+        CompanionPurpose.Visibility = app is { Compatibility: null, HasMechanicalCount: false }
+            ? Visibility.Visible : Visibility.Collapsed;
+        SetCompanionLink(AppStoreRow, AppStoreLink, app?.AppStore);
+        SetCompanionLink(GooglePlayRow, GooglePlayLink, app?.GooglePlay);
+        SetCompanionLink(CompatibilityRow, CompatibilityLink, app?.Compatibility);
+    }
+
+    private static void SetCompanionLink(TextBlock row, Hyperlink link, string? url)
+    {
+        link.NavigateUri = url is null ? null : new Uri(url);
+        row.Visibility = url is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private static string? PhotoFormatFor(CameraReading reading)
@@ -367,8 +395,80 @@ public partial class MainWindow : Window
                 FormatHistoryCount(decrease.To, count.IsUpperBound), decrease.ObservedAt.ToLocalTime());
 
         ShutterHistoryText.Text = message;
-        ShutterHistoryText.Foreground = (System.Windows.Media.Brush)FindResource(comparison?.LastDecrease is null ? "Secondary" : "Yellow");
+        ShutterHistoryText.SetResourceReference(TextBlock.ForegroundProperty, comparison?.LastDecrease is null ? "Secondary" : "Yellow");
         ShutterHistoryText.Visibility = Visibility.Visible;
+    }
+
+    private void ShowCameraIssues(ShutterUsage? usage)
+    {
+        CameraIssuesPanel.Visibility = _reading is null ? Visibility.Collapsed : Visibility.Visible;
+        if (_reading is null)
+            return;
+
+        (string message, string? action) = (_reading.ErrorSource, _reading.DeviceErrorCode) switch
+        {
+            (_, null) => (T(_reading.StorageIssues == CameraStorageIssues.None ? "CameraErrorStorageChecked" : "CameraErrorUnavailable"), null),
+            (CameraErrorSource.NikonDisplay, 0) => (T("CameraDisplayErrorClear"), null),
+            (CameraErrorSource.NikonDisplay, 1) => (T("CameraDisplayError"), T("FixUnknownCameraError")),
+            (CameraErrorSource.SonyTemperature, 0) => (T("CameraTemperatureClear"), null),
+            (CameraErrorSource.SonyTemperature, 1 or 2) => (T("CameraTemperatureWarning"), T("FixCoolCamera")),
+            (_, 0) => (T("CameraErrorClear"), null),
+            (CameraErrorSource.CanonEos, uint code) => FormatCameraError(code),
+            (_, uint code) => (T("CameraErrorUnknown", $"0x{code:X8}"), T("FixUnknownCameraError"))
+        };
+        CameraErrorText.Text = message;
+        CameraErrorText.SetResourceReference(TextBlock.ForegroundProperty, _reading.DeviceErrorCode is > 0 ? "Red" : "Secondary");
+        CameraErrorActionText.Text = action ?? "";
+        CameraErrorActionText.Visibility = action is null ? Visibility.Collapsed : Visibility.Visible;
+
+        var warnings = new List<(string Message, string Action)>();
+        if (_reading.StorageIssues is { } storage and not CameraStorageIssues.None)
+        {
+            foreach (var issue in Enum.GetValues<CameraStorageIssues>())
+            {
+                if (issue != CameraStorageIssues.None && storage.HasFlag(issue))
+                    warnings.Add((T("Storage" + issue), T(issue switch
+                    {
+                        CameraStorageIssues.Full => "FixStorageFull",
+                        CameraStorageIssues.ReadOnly => "FixStorageReadOnly",
+                        CameraStorageIssues.Busy => "FixStorageBusy",
+                        CameraStorageIssues.Unformatted => "FixStorageUnformatted",
+                        _ => "FixReseatStorage"
+                    })));
+            }
+        }
+        if (_reading.Battery is <= 20)
+            warnings.Add((T("IssueLowBattery", BatteryValue.Text), T("FixChargeBattery")));
+        if (usage is { Zone: UsageZone.High })
+            warnings.Add((T("IssueHighShutterUsage", PercentText.Text), T("FixHighShutterUsage")));
+        if (_reading is { Source: ReadingSource.Usb, Count.UsbProperty: not null } && _shutterComparison?.LastDecrease is not null)
+            warnings.Add((T("IssueShutterCountDecreased"), T("FixShutterCountDecreased")));
+
+        CameraWarningsText.Text = string.Join("\n\n", warnings.Select(warning => $"{warning.Message}\n{warning.Action}"));
+        CameraWarningsText.Visibility = warnings.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private (string Message, string Action) FormatCameraError(uint code)
+    {
+        // Canon documents the on-camera numbers. Public USB traces only confirm the zero value.
+        string number = code.ToString("D2", CultureInfo.InvariantCulture);
+        string hex = $"0x{code:X8}";
+        if (!_messages.TryGetValue("CanonError" + number, out var description))
+            return (T("CameraErrorUnknown", hex), T("FixUnknownCameraError"));
+
+        string fix = T(code switch
+        {
+            1 => "FixLensContacts",
+            2 => "FixReseatStorage",
+            3 => "FixStorageFolders",
+            4 => "FixStorageFull",
+            5 => "FixBuiltInFlash",
+            8 => "FixTransmitterBattery",
+            40 => "FixCameraPower",
+            60 => "FixLensMovement",
+            _ => "FixRestartCanon"
+        });
+        return (T("CameraErrorMatch", number, description, hex), T("FixConfirmCanonCode", fix));
     }
 
     private string FormatCount(uint count, bool isUpperBound) =>
@@ -431,7 +531,7 @@ public partial class MainWindow : Window
     {
         _connectionKey = key;
         ConnectionText.Text = T(key);
-        ConnectionDot.Fill = (System.Windows.Media.Brush)FindResource(brush);
+        ConnectionDot.SetResourceReference(Shape.FillProperty, brush);
     }
 
     private void SetHelpOverride(string key, string? argument = null)

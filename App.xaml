@@ -3,46 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="Background" Color="#0E2234" />
-        <SolidColorBrush x:Key="Card" Color="#142D43" />
-        <SolidColorBrush x:Key="Inset" Color="#11283C" />
-        <SolidColorBrush x:Key="Edge" Color="#355876" />
-        <SolidColorBrush x:Key="Text" Color="#E6F7FF" />
-        <SolidColorBrush x:Key="Secondary" Color="#B0CADD" />
-        <SolidColorBrush x:Key="Accent" Color="#91E6F5" />
-        <SolidColorBrush x:Key="ControlEdge" Color="#668DA9" />
-        <SolidColorBrush x:Key="PrimaryFill" Color="#2399B6" />
-        <SolidColorBrush x:Key="PrimaryText" Color="#0E2234" />
-        <SolidColorBrush x:Key="Green" Color="#8CE5A1" />
-        <SolidColorBrush x:Key="Yellow" Color="#F7CB71" />
-        <SolidColorBrush x:Key="Red" Color="#FFA29D" />
-
         <Style TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
         <Style x:Key="Eyebrow" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+            <Setter Property="Foreground" Value="{DynamicResource Secondary}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style x:Key="DetailLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+            <Setter Property="Foreground" Value="{DynamicResource Secondary}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,9,12,9" />
         </Style>
         <Style x:Key="DetailValue" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextAlignment" Value="Right" />
             <Setter Property="TextWrapping" Value="NoWrap" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
         </Style>
+        <SolidColorBrush x:Key="PrimaryFill" Color="#2399B6" />
+        <SolidColorBrush x:Key="PrimaryText" Color="#0E2234" />
         <CornerRadius x:Key="ButtonCornerRadius">7</CornerRadius>
         <Style x:Key="ButtonChrome" TargetType="Control">
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="Background" Value="{StaticResource Card}" />
-            <Setter Property="BorderBrush" Value="{StaticResource ControlEdge}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="Background" Value="{DynamicResource Card}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlEdge}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="15,8" />
             <Setter Property="MinHeight" Value="38" />
@@ -60,8 +48,8 @@
                                               TextElement.Foreground="{TemplateBinding Foreground}" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{StaticResource Accent}" /></Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{StaticResource Text}" /></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource Accent}" /></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource Text}" /></Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Face" Property="RenderTransform">
                                     <Setter.Value><TranslateTransform Y="1" /></Setter.Value>
@@ -78,6 +66,7 @@
             <Setter Property="Background" Value="{StaticResource PrimaryFill}" />
         </Style>
         <Style x:Key="DropdownItem" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -88,11 +77,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource Accent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}" />
                             </Trigger>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="{StaticResource Inset}" />
-                                <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource Edge}" />
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Inset}" />
+                                <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource ControlEdge}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -114,13 +103,13 @@
                                         <ColumnDefinition />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <ContentPresenter VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}"
+                                    <ContentPresenter x:Name="Selection" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}"
                                                       ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                                       ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                                       ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                                       TextElement.Foreground="{TemplateBinding Foreground}" />
                                     <Path Grid.Column="1" Data="M 0,0 L 4,4 L 8,0" Margin="10,0,0,0" VerticalAlignment="Center"
-                                          Stroke="{StaticResource Accent}" StrokeThickness="1.5"
+                                          Stroke="{DynamicResource Accent}" StrokeThickness="1.5"
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                 </Grid>
                             </Border>
@@ -153,10 +142,10 @@
                                                                     <Thumb>
                                                                         <Thumb.Template>
                                                                             <ControlTemplate TargetType="Thumb">
-                                                                                <Border x:Name="Grip" Background="{StaticResource ControlEdge}" CornerRadius="4" Margin="1,0" />
+                                                                                <Border x:Name="Grip" Background="{DynamicResource ControlEdge}" CornerRadius="4" Margin="1,0" />
                                                                                 <ControlTemplate.Triggers>
                                                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                                                        <Setter TargetName="Grip" Property="Background" Value="{StaticResource Secondary}" />
+                                                                                        <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Secondary}" />
                                                                                     </Trigger>
                                                                                 </ControlTemplate.Triggers>
                                                                             </ControlTemplate>
@@ -180,7 +169,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="Opacity" Value=".82" /></Trigger>
                             <Trigger SourceName="Toggle" Property="IsPressed" Value="True"><Setter TargetName="Face" Property="Opacity" Value=".65" /></Trigger>
-                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{StaticResource Accent}" /></Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource Accent}" /></Trigger>
                             <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Face" Property="Opacity" Value=".45" /></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

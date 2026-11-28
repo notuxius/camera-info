@@ -17,22 +17,31 @@ internal partial class SettingsWindow : Window
     {
         InitializeComponent();
         ApplyLanguage(language, messages);
-        LanguagePicker.ItemsSource = Languages.Options;
+        LanguagePicker.ItemsSource = Languages.Options.Prepend(Languages.System);
         LanguagePicker.SelectedItem = language;
         LanguagePicker.SelectionChanged += (_, _) =>
         {
             if (LanguagePicker.SelectedItem is LanguageOption option)
                 ApplyLanguage(option, changeLanguage(option));
         };
+        var app = (App)Application.Current;
+        ThemePicker.ItemsSource = Enum.GetValues<AppTheme>();
+        ThemePicker.SelectedItem = app.PreferredTheme;
+        ThemePicker.SelectionChanged += (_, _) =>
+        {
+            if (ThemePicker.SelectedItem is AppTheme theme)
+                app.ChangeTheme(theme);
+        };
     }
 
     private void ApplyLanguage(LanguageOption language, IReadOnlyDictionary<string, string> messages)
     {
-        _culture = language.Culture;
+        _culture = Languages.Resolve(language).Culture;
         _browserErrorFormat = messages["BrowserFailed"];
         Language = XmlLanguage.GetLanguage(_culture.IetfLanguageTag);
         FlowDirection = _culture.TextInfo.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-        foreach (string key in new[] { "Settings", "LanguageLabel", "About", "SupportedCameras", "CheckForUpdates", "Close" })
+        foreach (string key in new[] { "Settings", "LanguageLabel", "ThemeLabel", "ThemeLight", "ThemeDark", "SystemOption",
+            "About", "CameraDiagnostics", "SupportedCameras", "CheckForUpdates", "Close" })
             Resources[key] = messages[key];
         VersionText.Text = string.Format(_culture, messages["Version"], AppVersion);
         ShowBrowserError();

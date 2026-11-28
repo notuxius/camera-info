@@ -6,7 +6,7 @@ using System.Text;
 
 namespace CameraInspector;
 
-internal static class WindowsCamera
+internal static partial class WindowsCamera
 {
     private static readonly Guid ClientCategory = new("204d9f0c-2292-4080-9f42-40664e70f859");
     private static readonly Guid DeviceCategory = new("26d4979a-e643-4626-9e2b-736dc0c92fdc");
@@ -102,20 +102,29 @@ internal static class WindowsCamera
             catch (COMException error) when (!IsDeviceDisconnected(error)) { Debug.WriteLine(error); }
 
             if (nikonModel is not null)
-                return reading with { Model = nikonModel };
-            if (maker == "Nikon")
-                return reading with { Model = NikonNef.ModelName(reading.Model) ?? NikonNef.ModelName(camera.Name) ?? reading.Model };
-            if (maker != "Canon")
-                return reading;
+                reading = reading with { Model = nikonModel };
+            else if (maker == "Nikon")
+                reading = reading with { Model = NikonNef.ModelName(reading.Model) ?? NikonNef.ModelName(camera.Name) ?? reading.Model };
 
-            var usbModel = CanonShutter.UsbModel(camera.Id);
+            var usbModel = maker == "Canon" ? CanonShutter.UsbModel(camera.Id) : null;
             if (usbModel is not null && CanonShutter.ModelKey(usbModel) != CanonShutter.ModelKey(reading.Model))
                 reading = reading with { Model = usbModel };
 
-            var count = allowCommands && reading.Model.Contains("EOS", StringComparison.OrdinalIgnoreCase)
-                ? ReadShutterCount(device, CanonShutter.ProtocolFor(reading.Model), usbModel is not null)
-                : null;
-            return reading with { Count = count };
+            if (!allowCommands)
+                return reading;
+
+            string vendor = CameraIdentity.UsbVendor(camera.Id);
+            if (maker == "Canon" && reading.Model.Contains("EOS", StringComparison.OrdinalIgnoreCase))
+            {
+                var (count, errorCode) = ReadEosData(device, CanonShutter.ProtocolFor(reading.Model), usbModel is not null);
+                reading = reading with { Count = count, DeviceErrorCode = errorCode };
+            }
+            else
+                reading = ReadVendorError(device, reading, vendor);
+
+            return reading.StorageIssues is null
+                ? reading with { StorageIssues = ReadPtpStorageIssues(device, vendor) }
+                : reading;
         }
         catch (Exception error) when (IsDeviceDisconnected(error))
         {
@@ -168,18 +177,18 @@ internal static class WindowsCamera
         return new(model ?? defaults.Model, ReadString(values.Value, new(DeviceCategory, 7)) ?? defaults.Maker,
             ReadString(values.Value, new(DeviceCategory, 9)), ReadString(values.Value, new(DeviceCategory, 3)),
             values.Value.GetUnsignedIntegerValue(new(DeviceCategory, 4), out uint battery) >= 0 && battery <= 100 ? battery : null,
-            null);
+            null, StorageIssues: ReadWpdStorageIssues(content.Value, properties.Value));
     }
 
-    private static ShutterCount? ReadShutterCount(IPortableDevice device, CanonCounterProtocol protocol, bool identifiedByUsb)
+    private static (ShutterCount? Count, uint? DeviceErrorCode) ReadEosData(
+        IPortableDevice device, CanonCounterProtocol protocol, bool identifiedByUsb)
     {
         if (protocol == CanonCounterProtocol.Monitor && identifiedByUsb && ReadMonitorShutter(device) is { } monitor)
-            return monitor;
+            return (monitor, null);
 
-        var counts = new CanonShutterEvents(protocol);
-        counts.Legacy = ReadLegacyCounter(device);
-        if (counts.Legacy.HasValue && protocol != CanonCounterProtocol.ReleaseEvent)
-            return counts.Result;
+        var eos = new CanonEosEvents(protocol) { Legacy = ReadLegacyCounter(device) };
+        if (eos.Legacy.HasValue && protocol != CanonCounterProtocol.ReleaseEvent)
+            return (eos.Result, null);
 
         bool remote = TryControl(device, SetRemoteMode, 1);
         bool events = TryControl(device, SetEventMode, 1);
@@ -189,13 +198,13 @@ internal static class WindowsCamera
             if (events)
             {
                 TryRead(device, GetDeviceInfoEx);
-                ReadEvents(device, counts, 3);
-                if (!counts.HasMechanical && protocol == CanonCounterProtocol.ReleaseEvent)
-                    RequestAndRead(device, counts, CanonShutter.ReleaseProperty);
-                if (!counts.HasMechanical && !counts.Legacy.HasValue)
-                    RequestAndRead(device, counts, CanonShutter.LegacyProperty);
-                if (!counts.HasMechanical && !counts.ScalarRelease.HasValue && protocol != CanonCounterProtocol.ReleaseEvent)
-                    RequestAndRead(device, counts, CanonShutter.ReleaseProperty);
+                ReadEvents(device, eos, 3);
+                if (!eos.HasMechanical && protocol == CanonCounterProtocol.ReleaseEvent)
+                    RequestAndRead(device, eos, CanonShutter.ReleaseProperty);
+                if (!eos.HasMechanical && !eos.Legacy.HasValue)
+                    RequestAndRead(device, eos, CanonShutter.LegacyProperty);
+                if (!eos.HasMechanical && !eos.ScalarRelease.HasValue && protocol != CanonCounterProtocol.ReleaseEvent)
+                    RequestAndRead(device, eos, CanonShutter.ReleaseProperty);
             }
         }
         catch (Exception error) when (IsDeviceDisconnected(error))
@@ -211,7 +220,7 @@ internal static class WindowsCamera
                 TryControl(device, SetRemoteMode, 0);
         }
 
-        return counts.Result;
+        return (eos.Result, eos.DeviceErrorCode);
     }
 
     private static uint? ReadLegacyCounter(IPortableDevice device)
@@ -222,13 +231,13 @@ internal static class WindowsCamera
         return value == uint.MaxValue ? null : value;
     }
 
-    private static void RequestAndRead(IPortableDevice device, CanonShutterEvents counts, uint property)
+    private static void RequestAndRead(IPortableDevice device, CanonEosEvents eos, uint property)
     {
         if (TryControl(device, RequestProperty, property))
-            ReadEvents(device, counts, 4);
+            ReadEvents(device, eos, 4);
     }
 
-    private static void ReadEvents(IPortableDevice device, CanonShutterEvents counts, int attempts)
+    private static void ReadEvents(IPortableDevice device, CanonEosEvents eos, int attempts)
     {
         for (int attempt = 0; attempt < attempts; attempt++)
         {
@@ -238,8 +247,8 @@ internal static class WindowsCamera
             if (TryRead(device, GetEvent) is not { } data)
                 return;
 
-            counts.Parse(data);
-            if (counts.HasMechanical)
+            eos.Parse(data);
+            if (eos.HasMechanical)
                 return;
         }
     }
@@ -308,13 +317,16 @@ internal static class WindowsCamera
         }
     }
 
-    private static byte[]? TryRead(IPortableDevice device, uint opcode, params uint[] arguments)
+    private static byte[]? TryRead(IPortableDevice device, uint opcode, params uint[] arguments) =>
+        TryReadResponse(device, opcode, arguments).Data;
+
+    private static (byte[]? Data, uint? Response) TryReadResponse(IPortableDevice device, uint opcode, params uint[] arguments)
     {
         try { return Transfer(device, opcode, arguments); }
         catch (Exception error) when (error is (COMException or UnauthorizedAccessException or IOException) && !IsDeviceDisconnected(error))
         {
             Debug.WriteLine(error);
-            return null;
+            return default;
         }
     }
 
@@ -334,14 +346,14 @@ internal static class WindowsCamera
         }
     }
 
-    private static byte[]? Transfer(IPortableDevice device, uint opcode, uint[] arguments)
+    private static (byte[]? Data, uint? Response) Transfer(IPortableDevice device, uint opcode, uint[] arguments)
     {
         using var input = NewValues();
         AddOperation(input.Value, opcode, arguments);
         using var begin = Send(device, 13, input.Value);
         var context = ReadString(begin.Value, new(MtpCategory, 1006));
         if (context is null)
-            return null;
+            return (null, ReadResponse(begin.Value));
 
         using var transfer = NewValues();
         transfer.Value.SetStringValue(new(MtpCategory, 1006), context);
@@ -362,7 +374,7 @@ internal static class WindowsCamera
         }
         finally { response = EndTransfer(device, transfer.Value, disconnected); }
 
-        return response == PtpOk ? data : null;
+        return (response == PtpOk ? data : null, response);
     }
 
     private static uint? EndTransfer(IPortableDevice device, IPortableDeviceValues transfer, bool disconnected)

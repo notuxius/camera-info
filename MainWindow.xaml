@@ -3,59 +3,42 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Camera Inspector" Width="1040" Height="760" MinWidth="820" MinHeight="560" SizeToContent="Height"
         Icon="CameraInspector.ico"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource Background}"
-        Foreground="{StaticResource Text}" FontFamily="Segoe UI" FontSize="14"
+        WindowStartupLocation="CenterScreen" Background="{DynamicResource Background}"
+        Foreground="{DynamicResource Text}" FontFamily="Segoe UI" FontSize="14"
         UseLayoutRounding="True" Loaded="OnLoaded">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid x:Name="Dashboard" Background="{StaticResource Background}">
+        <Grid x:Name="Dashboard" Background="{DynamicResource Background}">
             <Grid Margin="36,28,36,26" MaxWidth="1080">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid Margin="0,0,0,24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="50" Height="50" CornerRadius="12" Background="#1E405A" BorderBrush="{StaticResource Edge}" BorderThickness="1" Margin="0,0,14,0">
-                            <Viewbox Width="25" Height="25">
-                                <Canvas Width="32" Height="32">
-                                    <Path Data="M 3,12 L 3,5 Q 3,3 5,3 L 12,3 M 20,3 L 27,3 Q 29,3 29,5 L 29,12 M 29,20 L 29,27 Q 29,29 27,29 L 20,29 M 12,29 L 5,29 Q 3,29 3,27 L 3,20"
-                                          Stroke="{StaticResource Accent}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    <Ellipse Canvas.Left="10" Canvas.Top="10" Width="12" Height="12" Stroke="{StaticResource Accent}" StrokeThickness="2" />
-                                </Canvas>
-                            </Viewbox>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Camera Inspector" FontSize="24" FontWeight="SemiBold" />
-                            <TextBlock Text="{DynamicResource CameraDiagnostics}" Foreground="{StaticResource Secondary}" FontSize="13" />
-                        </StackPanel>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}" Click="OnScan" />
-                        <Button x:Name="OpenPhotoButton" Content="{DynamicResource OpenPhoto}" Margin="9,0,0,0" Click="OnOpenPhoto" />
-                        <Button x:Name="SettingsButton" Content="{DynamicResource Settings}" Margin="9,0,0,0" Click="OnSettings" />
-                    </StackPanel>
-                </Grid>
-
-                <Border Grid.Row="1" Background="{StaticResource Inset}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                <Border Background="{DynamicResource Inset}" BorderBrush="{DynamicResource Edge}" BorderThickness="1"
                         CornerRadius="10" Padding="16,12" Margin="0,0,0,19">
                     <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="ConnectionDot" Fill="{StaticResource Secondary}" Width="8" Height="8" Margin="0,0,9,0" />
-                            <TextBlock x:Name="ConnectionText" FontWeight="SemiBold"
+                        <DockPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                            <Ellipse x:Name="ConnectionDot" DockPanel.Dock="Left" Fill="{DynamicResource Secondary}" Width="8" Height="8" Margin="0,0,9,0" />
+                            <TextBlock x:Name="ConnectionText" FontWeight="SemiBold" TextWrapping="Wrap"
                                        AutomationProperties.LiveSetting="Polite" />
+                        </DockPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}" Click="OnScan" />
+                            <Button x:Name="OpenPhotoButton" Content="{DynamicResource OpenPhoto}" Margin="9,0,0,0" Click="OnOpenPhoto" />
+                            <Button x:Name="SettingsButton" Content="{DynamicResource Settings}" Margin="9,0,0,0" Click="OnSettings" />
                         </StackPanel>
-                        <ComboBox x:Name="DevicePicker" Style="{StaticResource Dropdown}" MaxDropDownHeight="360" Grid.Column="1" MinWidth="225" TextSearch.TextPath="Name"
+                        <ComboBox x:Name="DevicePicker" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right"
+                                  Style="{StaticResource Dropdown}" MaxDropDownHeight="360"
+                                  Margin="0,9,0,0" MinWidth="225" TextSearch.TextPath="Name"
                                   MaxWidth="360" SelectionChanged="OnDeviceChanged" Visibility="Collapsed"
                                   AutomationProperties.Name="{DynamicResource ConnectedCameras}">
                             <ComboBox.ItemTemplate>
@@ -79,13 +62,13 @@
                     </Grid>
                 </Border>
 
-                <Grid Grid.Row="2">
+                <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.2*" />
                         <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                    <Border Background="{DynamicResource Card}" BorderBrush="{DynamicResource Edge}" BorderThickness="1"
                             CornerRadius="14" Padding="25,23" MinHeight="405">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -99,7 +82,7 @@
                                 <TextBlock x:Name="CountText" FontSize="53" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display, Segoe UI"
                                            FlowDirection="LeftToRight" HorizontalAlignment="Left"
                                            AutomationProperties.LiveSetting="Polite" />
-                                <TextBlock x:Name="RatingText" Foreground="{StaticResource Secondary}" Margin="0,2,0,0" />
+                                <TextBlock x:Name="RatingText" Foreground="{DynamicResource Secondary}" Margin="0,2,0,0" />
                             </StackPanel>
                             <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,24,0,0">
                                 <Grid Margin="0,0,0,8">
@@ -107,7 +90,7 @@
                                         <ColumnDefinition />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="ZoneText" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Secondary}"
+                                    <TextBlock x:Name="ZoneText" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource Secondary}"
                                                AutomationProperties.LiveSetting="Polite" />
                                     <TextBlock x:Name="PercentText" Grid.Column="1" FlowDirection="LeftToRight" Margin="8,0,0,0" FontWeight="SemiBold" />
                                 </Grid>
@@ -118,32 +101,32 @@
                                         <ColumnDefinition Width="30*" />
                                         <ColumnDefinition Width="20*" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Background="#315A40" CornerRadius="4,0,0,4" Margin="0,0,2,0" />
-                                    <Border Grid.Column="1" Background="#73592C" Margin="0,0,2,0" />
-                                    <Border Grid.Column="2" Background="#794048" CornerRadius="0,4,4,0" />
+                                    <Border Background="{DynamicResource ScaleLow}" CornerRadius="4,0,0,4" Margin="0,0,2,0" />
+                                    <Border Grid.Column="1" Background="{DynamicResource ScaleElevated}" Margin="0,0,2,0" />
+                                    <Border Grid.Column="2" Background="{DynamicResource ScaleHigh}" CornerRadius="0,4,4,0" />
                                     <Canvas Grid.ColumnSpan="3" IsHitTestVisible="False">
-                                        <Border x:Name="Marker" Width="5" Height="23" Canvas.Top="-3" Background="{StaticResource Text}"
-                                                BorderBrush="{StaticResource Background}" BorderThickness="1" CornerRadius="2" Visibility="Collapsed" />
+                                        <Border x:Name="Marker" Width="5" Height="23" Canvas.Top="-3" Background="{DynamicResource Text}"
+                                                BorderBrush="{DynamicResource Background}" BorderThickness="1" CornerRadius="2" Visibility="Collapsed" />
                                     </Canvas>
                                 </Grid>
                                 <UniformGrid Columns="3" Margin="0,12,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="{DynamicResource Low}" Foreground="{StaticResource Green}" FontWeight="SemiBold" />
-                                        <TextBlock Text="{DynamicResource LowRange}" FontSize="12" Foreground="{StaticResource Secondary}" />
+                                        <TextBlock Text="{DynamicResource Low}" Foreground="{DynamicResource Green}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{DynamicResource LowRange}" FontSize="12" Foreground="{DynamicResource Secondary}" />
                                     </StackPanel>
                                     <StackPanel Margin="8,0,0,0">
-                                        <TextBlock Text="{DynamicResource Elevated}" Foreground="{StaticResource Yellow}" FontWeight="SemiBold" />
-                                        <TextBlock Text="{DynamicResource ElevatedRange}" FontSize="12" Foreground="{StaticResource Secondary}" />
+                                        <TextBlock Text="{DynamicResource Elevated}" Foreground="{DynamicResource Yellow}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{DynamicResource ElevatedRange}" FontSize="12" Foreground="{DynamicResource Secondary}" />
                                     </StackPanel>
                                     <StackPanel HorizontalAlignment="Right">
-                                        <TextBlock Text="{DynamicResource High}" Foreground="{StaticResource Red}" FontWeight="SemiBold" />
-                                        <TextBlock Text="{DynamicResource HighRange}" FontSize="12" Foreground="{StaticResource Secondary}" />
+                                        <TextBlock Text="{DynamicResource High}" Foreground="{DynamicResource Red}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{DynamicResource HighRange}" FontSize="12" Foreground="{DynamicResource Secondary}" />
                                     </StackPanel>
                                 </UniformGrid>
                             </StackPanel>
-                            <Border Grid.Row="2" BorderBrush="{StaticResource Edge}" BorderThickness="0,1,0,0" Padding="0,13,0,0" Margin="0,20,0,0">
+                            <Border Grid.Row="2" BorderBrush="{DynamicResource Edge}" BorderThickness="0,1,0,0" Padding="0,13,0,0" Margin="0,20,0,0">
                                 <StackPanel>
-                                    <TextBlock x:Name="UsageNote" Foreground="{StaticResource Secondary}" FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="UsageNote" Foreground="{DynamicResource Secondary}" FontSize="13" TextWrapping="Wrap" />
                                     <TextBlock x:Name="ShutterHistoryText" FontSize="13" TextWrapping="Wrap" Margin="0,7,0,0" Visibility="Collapsed"
                                                AutomationProperties.LiveSetting="Polite" />
                                 </StackPanel>
@@ -151,7 +134,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Edge}" BorderThickness="1" CornerRadius="14" Padding="24,23">
+                    <Border Grid.Column="2" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Edge}" BorderThickness="1" CornerRadius="14" Padding="24,23">
                         <StackPanel>
                             <Grid Margin="0,0,0,14">
                                 <Grid.ColumnDefinitions>
@@ -164,10 +147,10 @@
                                                TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 </StackPanel>
-                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="9" Background="#1E405A" Margin="12,0,0,0">
+                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="9" Background="{DynamicResource IconSurface}" Margin="12,0,0,0">
                                     <Viewbox Width="24" Height="24">
                                         <Path Data="M 2,8 H 6 L 8,5 H 16 L 18,8 H 22 V 20 H 2 Z M 16,14 A 4,4 0 1 0 8,14 A 4,4 0 1 0 16,14"
-                                              Stroke="{StaticResource Secondary}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                                              Stroke="{DynamicResource Secondary}" StrokeThickness="1.5" StrokeLineJoin="Round" />
                                     </Viewbox>
                                 </Border>
                             </Grid>
@@ -176,11 +159,11 @@
                                     <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                                <Border Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Edge}" />
-                                <Border Grid.Row="1" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Edge}" />
-                                <Border Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Edge}" />
-                                <Border Grid.Row="3" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Edge}" />
-                                <Border Grid.Row="4" Grid.ColumnSpan="2" BorderThickness="0,1,0,1" BorderBrush="{StaticResource Edge}" />
+                                <Border Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Edge}" />
+                                <Border Grid.Row="1" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Edge}" />
+                                <Border Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Edge}" />
+                                <Border Grid.Row="3" Grid.ColumnSpan="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Edge}" />
+                                <Border Grid.Row="4" Grid.ColumnSpan="2" BorderThickness="0,1,0,1" BorderBrush="{DynamicResource Edge}" />
                                 <TextBlock Text="{DynamicResource Manufacturer}" Style="{StaticResource DetailLabel}" />
                                 <TextBlock Grid.Row="1" Text="{DynamicResource SerialNumber}" Style="{StaticResource DetailLabel}" />
                                 <TextBlock Grid.Row="2" Text="{DynamicResource Firmware}" Style="{StaticResource DetailLabel}" />
@@ -194,28 +177,73 @@
                                 <TextBlock x:Name="SourceValue" Grid.Row="4" Grid.Column="1" Text="—" Style="{StaticResource DetailValue}" TextWrapping="Wrap" />
                             </Grid>
                             <TextBlock x:Name="RatingLinkRow" Margin="0,10,0,0" Visibility="Collapsed">
-                                <Hyperlink x:Name="RatingLink" Foreground="{StaticResource Accent}" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource RatingSource}" /></Hyperlink>
+                                <Hyperlink x:Name="RatingLink" Foreground="{DynamicResource Accent}" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource RatingSource}" /></Hyperlink>
                             </TextBlock>
+                            <Border x:Name="CameraIssuesPanel" Margin="0,14,0,0" Padding="0,12,0,0" Visibility="Collapsed"
+                                    BorderBrush="{DynamicResource Edge}" BorderThickness="0,1,0,0">
+                                <StackPanel>
+                                    <TextBlock x:Name="CameraIssuesHeading" Text="{DynamicResource CameraIssues}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <TextBlock x:Name="CameraErrorText" FontSize="13" TextWrapping="Wrap"
+                                               AutomationProperties.LiveSetting="Polite" />
+                                    <TextBlock x:Name="CameraErrorActionText" Foreground="{DynamicResource Secondary}" FontSize="13"
+                                               TextWrapping="Wrap" Margin="0,3,0,0" Visibility="Collapsed"
+                                               AutomationProperties.LiveSetting="Polite" />
+                                    <TextBlock x:Name="CameraWarningsText" Foreground="{DynamicResource Yellow}" FontSize="13"
+                                               TextWrapping="Wrap" Margin="0,4,0,0" AutomationProperties.LiveSetting="Polite" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <Border Grid.Row="3" Margin="0,19,0,0" Background="{StaticResource Inset}" BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                <Border Grid.Row="2" Margin="0,19,0,0" Background="{DynamicResource Inset}" BorderBrush="{DynamicResource Edge}" BorderThickness="1"
                         CornerRadius="10" Padding="17,13">
                     <StackPanel>
                         <TextBlock x:Name="HelpTitle" FontWeight="SemiBold" Margin="0,0,0,3" />
                         <TextBlock x:Name="HelpText"
-                                   Foreground="{StaticResource Secondary}" FontSize="13" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource Secondary}" FontSize="13" TextWrapping="Wrap" />
+                        <StackPanel x:Name="CompanionPanel" Margin="0,11,0,0" Visibility="Collapsed">
+                            <TextBlock x:Name="CompanionHeading" Text="{DynamicResource CompanionApps}" FontWeight="SemiBold" Margin="0,0,0,3" />
+                            <WrapPanel>
+                                <TextBlock x:Name="CompanionAppName" Margin="0,0,12,0" />
+                                <TextBlock x:Name="AppStoreRow" Margin="0,0,12,0">
+                                    <Hyperlink x:Name="AppStoreLink" Foreground="{DynamicResource Accent}" RequestNavigate="OnOpenLink">App Store</Hyperlink>
+                                </TextBlock>
+                                <TextBlock x:Name="GooglePlayRow">
+                                    <Hyperlink x:Name="GooglePlayLink" Foreground="{DynamicResource Accent}" RequestNavigate="OnOpenLink">Google Play</Hyperlink>
+                                </TextBlock>
+                                <TextBlock x:Name="CompatibilityRow">
+                                    <Hyperlink x:Name="CompatibilityLink" Foreground="{DynamicResource Accent}" RequestNavigate="OnOpenLink"><Run Text="{DynamicResource CheckAppCompatibility}" /></Hyperlink>
+                                </TextBlock>
+                            </WrapPanel>
+                            <TextBlock x:Name="CompanionPurpose" Text="{DynamicResource CompanionPhotoTransfer}"
+                                       Foreground="{DynamicResource Secondary}" FontSize="13" TextWrapping="Wrap" Margin="0,3,0,0" />
+                        </StackPanel>
                         <StackPanel x:Name="ManualPanel" Orientation="Horizontal" Margin="0,11,0,0" Visibility="Collapsed">
                             <TextBox x:Name="ManualCount" Width="158" VerticalContentAlignment="Center" Padding="7,3" MaxLength="10"
-                                     Background="{StaticResource Card}" Foreground="{StaticResource Text}" BorderBrush="{StaticResource ControlEdge}"
-                                     CaretBrush="{StaticResource Accent}" SelectionBrush="{StaticResource PrimaryFill}"
-                                     SelectionTextBrush="{StaticResource PrimaryText}" SelectionOpacity="1"
-                                     FlowDirection="LeftToRight" AutomationProperties.Name="{DynamicResource VerifiedCount}" />
+                                     Background="{DynamicResource Card}" Foreground="{DynamicResource Text}"
+                                     BorderBrush="{DynamicResource ControlEdge}" BorderThickness="1" CaretBrush="{DynamicResource Accent}"
+                                     SelectionBrush="{StaticResource PrimaryFill}" SelectionTextBrush="{StaticResource PrimaryText}" SelectionOpacity="1"
+                                     FlowDirection="LeftToRight" AutomationProperties.Name="{DynamicResource VerifiedCount}">
+                                <TextBox.Template>
+                                    <ControlTemplate TargetType="TextBox">
+                                        <Border x:Name="Face" Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="{StaticResource ButtonCornerRadius}">
+                                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" Padding="{TemplateBinding Padding}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </TextBox.Template>
+                            </TextBox>
                             <Button x:Name="ApplyCountButton" Content="{DynamicResource ApplyCount}" Click="OnApplyCount" Margin="8,0,0,0" />
                             <Button x:Name="ClearCountButton" Content="{DynamicResource Reset}" Click="OnClearCount" Margin="8,0,0,0" Visibility="Collapsed" />
                         </StackPanel>
-                        <TextBlock x:Name="ManualError" Foreground="{StaticResource Red}" FontSize="13" Margin="0,5,0,0" Visibility="Collapsed" />
+                        <TextBlock x:Name="ManualError" Foreground="{DynamicResource Red}" FontSize="13" Margin="0,5,0,0" Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
             </Grid>

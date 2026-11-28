@@ -1,11 +1,55 @@
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using CameraInspector;
 
 internal static partial class Program
 {
+    private static void CheckCompanionApps()
+    {
+        (string Maker, string Model, string? Firmware, string App, bool Apple, bool Google)[] matches =
+        [
+            ("FUJIFILM", "Fujifilm X-E5", null, "FUJIFILM XApp", true, true),
+            ("Fujifilm", "X-E3", null, "FUJIFILM Camera Remote", true, true),
+            ("Fujifilm", "X-HF1", null, "X half", true, true),
+            ("Canon Inc.", "Canon EOS Kiss X10i", null, "Canon Camera Connect", true, true),
+            ("Nikon Corporation", "Z5_2C", null, "SnapBridge", true, true),
+            ("Nikon", "Nikon D750", null, "SnapBridge", false, true),
+            ("Sony", "α7 IV", "Ver. 1.10", "Imaging Edge Mobile", true, true),
+            ("Sony", "ILCE-7M4", "2.00", "Creators’ App", true, true),
+            ("Panasonic", "DC-S1M2", null, "LUMIX Lab", true, true),
+            ("Panasonic", "LUMIX S5 II", "3.0", "LUMIX Sync", true, true),
+            ("Panasonic", "DC-S5M2", "3.1", "LUMIX Lab", true, true),
+            ("OM Digital Solutions Corporation", "Olympus OM-D E-M1MarkIII", null, "OM Image Share", true, true),
+            ("RICOH IMAGING COMPANY, LTD.", "PENTAX K-3 Mark III Monochrome", null, "Image Sync", true, true),
+            ("Ricoh", "RICOH GR IV HDF", null, "GR WORLD", true, true),
+            ("Leica", "LEICA Q3 Monochrom", null, "Leica FOTOS", true, true),
+            ("Hasselblad", "X1D II 50C", null, "Phocus Mobile", true, false),
+            ("Hasselblad", "X2D II 100C", null, "Phocus Mobile", true, true)
+        ];
+        foreach (var (maker, model, firmware, appName, apple, google) in matches)
+        {
+            var app = CompanionApps.For(new(model, maker, null, firmware, null, null));
+            Check(app?.Name == appName && (app.AppStore is not null) == apple && (app.GooglePlay is not null) == google,
+                $"{model} has the confirmed companion app and platform links");
+        }
+
+        Check(CompanionApps.For(new("ILCE-7M4", "Sony", null, null, null, null)) is
+            { AppStore: null, GooglePlay: null, Compatibility: not null }, "Missing Sony firmware shows a compatibility link");
+        Check(CompanionApps.For(new("ILCE-7M4", "Sony", null, "1.10", null, null, ReadingSource.Arw)) is
+            { AppStore: null, GooglePlay: null, Compatibility: not null }, "Photo firmware may be out of date after a Sony app migration");
+        Check(CompanionApps.For(new("X-T5", "Fujifilm", null, "2.00", null, null)) is
+            { AppStore: not null, HasMechanicalCount: false } && CompanionApps.For(new("X-T5", "Fujifilm", null, "3.01", null, null)) is
+            { HasMechanicalCount: true }, "X-T5 gains the XApp mechanical counter with firmware 3.01");
+        Check(CompanionApps.For(new("X-E5", "Unknown maker", null, null, null, null)) is null &&
+            CompanionApps.For(new("X-E50", "Fujifilm", null, null, null, null)) is null &&
+            CompanionApps.For(new("Canon EOS 5D Mark III", "Canon", null, null, null, null)) is null,
+            "Unconfirmed models and makers do not inherit companion links");
+    }
+
     private static void CheckAdditionalUsbCameras()
     {
         (string Id, string? Name, string Model, string Maker)[] bodies =
@@ -33,14 +77,76 @@ internal static partial class Program
 
         foreach (var (id, name, model, maker) in bodies)
         {
-            var reading = new EmulatedCamera(new(id, name)) { Model = model, Maker = maker }.Read();
-            Check(reading.Model == model && reading.Maker == maker && reading.Count is null && reading.Battery == 72,
-                $"{model} reads USB metadata without sending Canon commands");
+            CameraExchange[] requests = id.Contains("vid_04cb", StringComparison.Ordinal)
+                ? [Read(0x1015, [], 0xD21B) with { Response = 0x200A, ResponseBeforeData = true }] : [];
+            var reading = new EmulatedCamera(new(id, name), requests)
+            {
+                Model = model, Maker = maker, Storage =
+                    [new(4, 0, 200, 0), new(4, 0, null, null, DeviceIoError), new(4, 1, 200, 8), new(1, 1, 200, 0)]
+            }.Read();
+            Check(reading.Model == model && reading.Maker == maker && reading.Count is null && reading.Battery == 72 &&
+                reading.StorageIssues == (CameraStorageIssues.Full | CameraStorageIssues.ReadOnly),
+                $"{model} reports USB metadata and multiple storage issues without sending Canon commands");
         }
 
         Check(new EmulatedCamera(new("wpd#future", "Digital Camera")) { Model = "EOS in a camera name" }.Read().Count is null,
             "An EOS-like model name from a generic device cannot enable Canon commands");
         Console.WriteLine("Additional USB camera discovery and metadata checks passed.");
+    }
+
+    private static void CheckCameraStatusDashboard(MainWindow window, string? renderFolder)
+    {
+        byte[] ids = [3, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 2, 0];
+        byte[] full = new byte[28];
+        BinaryPrimitives.WriteUInt16LittleEndian(full, 4);
+        BinaryPrimitives.WriteUInt64LittleEndian(full.AsSpan(6), 1024);
+
+        var (lumix, nikon, fuji, sony, leica) = Task.Run(() =>
+        {
+            var lumix = new EmulatedCamera(new("wpd#panasonic", "DC-GH7"), Read(0x1004, ids),
+                Read(0x1005, full, 0x00010001),
+                Read(0x1005, [], 0x00020001) with { Response = 0x2013, ResponseBeforeData = true })
+            { Model = "DC-GH7", Maker = "Panasonic", Storage = [] }.Read();
+            var nikon = new EmulatedCamera(new("usb#vid_04b0&pid_0442", "Nikon Z 7"),
+                Read(0x1015, [1], 0xD1B2), Read(0x1004, []) with { Response = 0xA022 })
+            { Maker = "Nikon", Storage = [] }.Read();
+            var fuji = new EmulatedCamera(new("usb#vid_04cb&pid_0313", "FUJIFILM X-E5"),
+                Read(0x1015, [2, 0], 0xD21B)) { Maker = "Fujifilm" }.Read();
+            var sony = new EmulatedCamera(new("usb#vid_054c&pid_0f50", "ILCE-7M5"),
+                Read(0x9204, [2], 0xD251)) { Maker = "Sony" }.Read();
+            var leica = new EmulatedCamera(new("wpd#leica", "Leica M11"),
+                Read(0x1004, Counter(0))) { Maker = "Leica", Storage = [new(4, uint.MaxValue, 0, 0)] }.Read();
+            return (lumix, nikon, fuji, sony, leica);
+        }).GetAwaiter().GetResult();
+
+        window.ShowUsbReading(lumix, null);
+        Check(Label(window, "CameraWarningsText") ==
+            "A camera storage volume is full.\nUse another card or back up your files before deleting any.\n\n" +
+            "The camera reported that storage is unavailable.\nIf you use a memory card, turn the camera off and reinsert it or try a compatible spare. Reconnect and rescan.",
+            "The shared PTP route explains both storage problems and shows an action for each");
+        if (renderFolder is not null)
+            Render((Grid)window.FindName("Dashboard"), renderFolder, "usb-storage-issues", 786, 880);
+
+        window.ShowUsbReading(nikon, null);
+        Check(Label(window, "CameraErrorText") == "The camera’s error indicator is active. Check its display for details." &&
+            Label(window, "CameraErrorActionText") == "Follow any instructions shown there. If the error returns, save the code or message for support." &&
+            Label(window, "CameraWarningsText") ==
+                "The camera reported unformatted storage.\nBack up any files before formatting the card in the camera. You can also try another compatible card.",
+            "A Nikon display warning and a Nikon storage response both reach the dashboard");
+
+        window.ShowUsbReading(fuji, null);
+        Check(Label(window, "CameraErrorText") == "Unknown camera error (0x00000002). Check the camera display for details.",
+            "Fujifilm error codes with no verified mapping keep their value");
+
+        window.ShowUsbReading(sony, null);
+        Check(Label(window, "CameraErrorText") == "The camera reported an overheating warning." &&
+            Label(window, "CameraErrorActionText") == "Turn the camera off and let it cool before turning it back on." &&
+            Label(window, "CameraWarningsText") == "", "Sony thermal status is decoded and old storage issues are cleared");
+
+        window.ShowUsbReading(leica, null);
+        Check(Label(window, "CameraErrorText") == "Internal camera error status unavailable." &&
+            Label(window, "CameraErrorActionText") == "" && Label(window, "CameraWarningsText") == "",
+            "Placeholder storage data and an empty PTP storage list do not imply a camera fault");
     }
 
     private static void CheckAdditionalPhotos(string preferencePath, string folder, string? renderFolder)
@@ -74,15 +180,26 @@ internal static partial class Program
         var window = new MainWindow(preferencePath);
         RunScanCheck(window, async () =>
         {
+            var companionPanel = (StackPanel)window.FindName("CompanionPanel");
+            var appStore = (Hyperlink)window.FindName("AppStoreLink");
+            var googlePlay = (Hyperlink)window.FindName("GooglePlayLink");
+            var compatibility = (Hyperlink)window.FindName("CompatibilityLink");
+            Check(companionPanel.Visibility == Visibility.Collapsed, "No reading hides the companion section");
             window.ShowUsbReading(new("X-E5", "FUJIFILM", "TEST", "1.10", null, null), null);
-            Check(((StackPanel)window.FindName("ManualPanel")).Visibility == System.Windows.Visibility.Visible &&
+            Check(((StackPanel)window.FindName("ManualPanel")).Visibility == Visibility.Visible &&
                 Label(window, "HelpText").Contains("Number of shutter movements"), "X-E5 USB points to the XApp counter");
+            Check(companionPanel.Visibility == Visibility.Visible && Label(window, "CompanionAppName") == "FUJIFILM XApp" &&
+                appStore.NavigateUri.AbsoluteUri == "https://apps.apple.com/app/id1586089681" &&
+                googlePlay.NavigateUri.AbsoluteUri == "https://play.google.com/store/apps/details?id=com.fujifilm.xapp",
+                "The X-E5 USB dashboard shows both official XApp store links");
 
             await window.ReadPhotoAsync(WritePhoto("x-e5.RAF", raf));
             Check(Label(window, "ModelTitle") == "Fujifilm X-E5" && Label(window, "SourceValue") == "RAF" &&
                 Label(window, "FirmwareValue") == "1.10" && Label(window, "CountText") == "199" &&
                 Label(window, "ReadingLabel") == "Image count" && Label(window, "ZoneText") == "Usage unavailable",
                 "The X-E5 RAF image count is decoded and displayed without a mechanical usage zone");
+            Check(Label(window, "CompanionAppName") == "FUJIFILM XApp" && googlePlay.NavigateUri.Query == "?id=com.fujifilm.xapp",
+                "Importing an X-E5 RAF retains the XApp links");
             var manualCount = (TextBox)window.FindName("ManualCount");
             manualCount.Text = "129";
             ((Button)window.FindName("ApplyCountButton")).RaiseEvent(new(Button.ClickEvent));
@@ -102,6 +219,8 @@ internal static partial class Program
             await window.ReadPhotoAsync(WritePhoto("alpha-7v.ARW", sony));
             Check(Label(window, "SourceValue") == "ARW" && Label(window, "CountText") == "667" &&
                 Label(window, "ReadingLabel") == "Mechanical shutter count", "Alpha 7 V mechanical ARW count");
+            Check(Label(window, "CompanionAppName") == "Creators’ App" && googlePlay.NavigateUri.Query == "?id=jp.co.sony.ips.portalapp",
+                "Switching readings replaces the previous companion app and links");
 
             byte[] sonyJpeg = (byte[])sony.Clone();
             sony.AsSpan(noteOffset, 14).CopyTo(sonyJpeg.AsSpan(noteOffset + 12));
@@ -129,6 +248,16 @@ internal static partial class Program
             await window.ReadPhotoAsync(WritePhoto("k-3-monochrome.DNG", pentax));
             Check(Label(window, "SourceValue") == "DNG" && Label(window, "CountText") == "495" &&
                 Label(window, "ReadingLabel") == "Camera-reported shutter count", "Pentax DNG private data yields the reported count");
+
+            window.ShowUsbReading(new("Nikon D750", "Nikon", null, null, null, null), null);
+            Check(appStore.NavigateUri is null && googlePlay.NavigateUri is not null,
+                "An Android-only model clears the previous App Store link");
+            window.ShowUsbReading(new("ILCE-7M4", "Sony", null, null, null, null), null);
+            Check(appStore.NavigateUri is null && googlePlay.NavigateUri is null && compatibility.NavigateUri.Host == "www.sony.com",
+                "An unresolved firmware-dependent match shows only the vendor compatibility link");
+            window.ShowUsbReading(new("X-E50", "Fujifilm", null, null, null, null), null);
+            Check(companionPanel.Visibility == Visibility.Collapsed && compatibility.NavigateUri is null &&
+                !Label(window, "HelpText").Contains("XApp"), "An unlisted camera clears companion links and XApp guidance");
         });
         Console.WriteLine("Additional original-photo dashboard checks passed.");
 

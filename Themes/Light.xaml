@@ -9,9 +9,9 @@
     <SolidColorBrush x:Key="ControlEdge" Color="#3B7094" />
     <SolidColorBrush x:Key="ControlAccent" Color="#205575" />
     <SolidColorBrush x:Key="ButtonFocusEdge" Color="#163852" />
-    <SolidColorBrush x:Key="PrimaryFill" Color="#2399B6" />
+    <SolidColorBrush x:Key="PrimaryFill" Color="#147891" />
     <SolidColorBrush x:Key="PrimaryEdge" Color="#3B7094" />
-    <SolidColorBrush x:Key="PrimaryText" Color="#0E2234" />
+    <SolidColorBrush x:Key="PrimaryText" Color="#FFFFFF" />
     <SolidColorBrush x:Key="Text" Color="#163852" />
     <SolidColorBrush x:Key="Secondary" Color="#456276" />
     <SolidColorBrush x:Key="Accent" Color="#205575" />

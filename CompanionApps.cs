@@ -143,7 +143,7 @@ internal static partial class CompanionApps
     private static CompanionApp SonyApp(CameraReading reading, int creatorsMajor)
     {
         // An original photo records the firmware at capture time.
-        if (reading.Source != ReadingSource.Usb || Firmware(reading) is not { } firmware)
+        if (!reading.IsLive || Firmware(reading) is not { } firmware)
             return SonyFirmware;
 
         return firmware.Major >= creatorsMajor ? Creators : ImagingEdge;

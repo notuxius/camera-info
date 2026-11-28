@@ -31,14 +31,15 @@
                             <TextBlock x:Name="ConnectionText" FontWeight="SemiBold" TextWrapping="Wrap"
                                        AutomationProperties.LiveSetting="Polite" />
                         </DockPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="0,9,0,0">
                             <Button x:Name="ScanButton" Content="{DynamicResource Scan}" Style="{StaticResource PrimaryButton}" Click="OnScan" />
+                            <Button x:Name="WifiButton" Content="{DynamicResource ScanWifi}" Margin="9,0,0,0" Click="OnScanWifi" />
                             <Button x:Name="OpenPhotoButton" Content="{DynamicResource OpenPhoto}" Margin="9,0,0,0" Click="OnOpenPhoto" />
                             <Button x:Name="SettingsButton" Content="{DynamicResource Settings}" Margin="9,0,0,0" Click="OnSettings" />
-                        </StackPanel>
-                        <ComboBox x:Name="DevicePicker" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right"
+                        </WrapPanel>
+                        <ComboBox x:Name="DevicePicker" Grid.Column="1" HorizontalAlignment="Right"
                                   Style="{StaticResource Dropdown}" MaxDropDownHeight="360"
-                                  Margin="0,9,0,0" MinWidth="225" TextSearch.TextPath="Name"
+                                  MinWidth="225" TextSearch.TextPath="Name"
                                   MaxWidth="360" SelectionChanged="OnDeviceChanged" Visibility="Collapsed"
                                   AutomationProperties.Name="{DynamicResource ConnectedCameras}">
                             <ComboBox.ItemTemplate>

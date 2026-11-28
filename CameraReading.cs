@@ -6,7 +6,7 @@ internal sealed record CameraDevice(string Id, string? Name)
 }
 
 internal enum CountKind { Mechanical, Unspecified, Image }
-internal enum ReadingSource { Usb, Nef, Raf, Arw, Pef, Dng, Jpeg }
+internal enum ReadingSource { Usb, Nef, Raf, Arw, Pef, Dng, Jpeg, Wifi }
 internal enum CameraErrorSource { CanonEos, NikonDisplay, FujifilmDevice, SonyTemperature }
 
 [Flags]
@@ -24,7 +24,10 @@ internal readonly record struct ShutterCount(uint Value, CountKind Kind, uint? U
 internal sealed record CameraReading(
     string Model, string Maker, string? Serial, string? Firmware, uint? Battery, ShutterCount? Count,
     ReadingSource Source = ReadingSource.Usb, uint? DeviceErrorCode = null,
-    CameraErrorSource ErrorSource = CameraErrorSource.CanonEos, CameraStorageIssues? StorageIssues = null);
+    CameraErrorSource ErrorSource = CameraErrorSource.CanonEos, CameraStorageIssues? StorageIssues = null)
+{
+    internal bool IsLive => Source is ReadingSource.Usb or ReadingSource.Wifi;
+}
 
 internal sealed record CameraRating(uint Cycles, string Source);
 

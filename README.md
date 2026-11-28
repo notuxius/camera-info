@@ -1,6 +1,6 @@
 # Camera Inspector
 
-A utility for reading camera details over USB and checking counters in original Nikon, Fujifilm, Sony, and Pentax photos. It compares available mechanical counts with the manufacturer’s published durability ratings.
+A utility for reading camera details over USB or compatible Wi-Fi connections and checking counters in original Nikon, Fujifilm, Sony, and Pentax photos. It compares available mechanical counts with the manufacturer’s published durability ratings.
 
 ## Download
 
@@ -20,6 +20,16 @@ Select **Open original photo** and choose a recent, unedited Nikon NEF or JPEG, 
 
 On the Fujifilm X-E5, select **USB CARD READER** under **Network/USB Setting** → **Connection Mode**. [Fujifilm X-E5 manual](https://app.fujifilm-dsc.com/en/manual/x-e5/connections/network_usb_menu/)
 
+### Scan over Wi-Fi
+
+1. On a compatible Canon EOS camera, open **Connect to EOS Utility** and start pairing or reconnect to the saved Camera Inspector connection. Close EOS Utility on the PC.
+2. Join the same local network on both devices, or connect the PC to the camera’s Wi-Fi network.
+3. In Camera Inspector, select **Scan over Wi-Fi**. Pick the discovered camera address or enter its IPv4 address, then select **Connect**. Confirm pairing on the camera if prompted. [Canon EOS R8 pairing guide](https://cam.start.canon/en/C013/manual/html/UG-07_Network_0050.html)
+
+Automatic discovery looks for Canon EOS cameras advertising PC pairing. Direct IPv4 entry uses standard PTP/IP on port 15740 and can read basic metadata from other cameras that expose this protocol. Battery, Canon shutter count, and Canon error status depend on what the camera returns in that wireless mode. The USB diagnostic monitor and storage checks remain available through a USB scan. Wi-Fi support has been checked with a local PTP/IP emulator and still needs testing with physical cameras. [Canon pairing and PTP/IP packet trace](https://julianschroden.com/post/2023-05-10-pairing-and-initializing-a-ptp-ip-connection-with-a-canon-eos-camera/)
+
+### Dashboard
+
 The **Language** and **Theme** settings both default to **System**. Camera Inspector follows the Windows display language and app color settings, using English if the display language is unavailable. You can also choose a specific language or select **Light** or **Dark** and Camera Inspector will remember your choices. The **About** section in Settings shows the installed version and links to supported cameras and the latest release.
 
 Camera Inspector restores the dashboard window's size and position when you reopen it.
@@ -28,7 +38,7 @@ Camera Inspector displays the model, firmware, serial number, battery charge, an
 
 The camera outline uses the shutter usage palette. It starts neutral, turns green when a read succeeds, yellow when a successful read reports an active camera error, and red when the read fails.
 
-**Camera issues** flags battery charge at 20% or below, high mechanical shutter usage, and decreases recorded in USB shutter history. When a Canon EOS scan receives an active USB error value, the app looks up its decimal value in Canon’s published on-camera error descriptions. The dashboard labels these as possible matches because the available USB traces only confirm the zero value. It also shows the original hexadecimal code. [Canon EOS error descriptions](https://asia.canon/en/support/8200669200) · [Canon EOS R USB trace](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-eos-r.txt)
+**Camera issues** flags battery charge at 20% or below, high mechanical shutter usage, and decreases recorded in shutter history. When a Canon EOS scan receives an active error value, the app looks up its decimal value in Canon’s published on-camera error descriptions. The dashboard labels these as possible matches because the available USB traces only confirm the zero value. It also shows the original hexadecimal code. [Canon EOS error descriptions](https://asia.canon/en/support/8200669200) · [Canon EOS R USB trace](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/cameras/canon-eos-r.txt)
 
 USB scans check storage across all supported brands. The dashboard explains full and read-only volumes exposed by Windows Portable Devices. When Windows supplies no usable storage data, the app tries read-only PTP storage queries and explains known camera responses such as unavailable, busy, or inaccessible storage. An empty storage list leaves the check inconclusive. [Windows storage properties](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/storage-properties) · [PTP responses](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 
@@ -36,11 +46,11 @@ On bodies and USB modes that expose vendor status, the app also reads Nikon’s 
 
 The dashboard shows a suggested next step under each reported issue. It asks you to confirm a possible Canon match on the camera display and to save the displayed message for support if an unknown error returns. Storage troubleshooting includes a backup step before deleting files or formatting media. [Canon EOS troubleshooting](https://asia.canon/en/support/8201509200) · [Fujifilm warning messages](https://app.fujifilm-dsc.com/en/manual/x-t5/technical_notes/warning_messages/) · [Sony warning messages](https://helpguide.sony.net/ilc/2320/v1/en/contents/t11_messages.html)
 
-**Companion apps** appears when a USB scan or original photo identifies a camera with a known app. The dashboard links to desktop downloads for your operating system and labels apps that are available only on the other platform. The download pages list OS and firmware requirements. Mobile apps have App Store and Google Play links where available. If the phone app depends on firmware that Camera Inspector cannot verify, select **Check app compatibility**.
+**Companion apps** appears when a live scan or original photo identifies a camera with a known app. The dashboard links to desktop downloads for your operating system and labels apps that are available only on the other platform. The download pages list OS and firmware requirements. Mobile apps have App Store and Google Play links where available. If the phone app depends on firmware that Camera Inspector cannot verify, select **Check app compatibility**.
 
 For the Fujifilm X-E5, install **FUJIFILM XApp** from the dashboard links, pair the camera, and look for **Number of shutter movements** under **Equipment Status**. Enter that value in Camera Inspector and select **Apply count**. The dashboard labels it **Manual count** and shows the mechanical reading even without a durability rating. Select **Reset** to restore the USB or RAF reading. [Fujifilm’s explanation of the XApp counters](https://digitalcamera-support-en.fujifilm.com/digitalcameraengpcdetail?aid=000004895)
 
-The first USB scan with a serial number and shutter count saves a baseline on this PC. Later scans compare the same camera model, serial number, and Canon counter. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored under `%LOCALAPPDATA%\Camera Info\Shutter History`.
+The first live scan with a serial number and shutter count saves a baseline on this PC. USB and Wi-Fi scans share history when the camera model, serial number, and Canon counter match. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored under `%LOCALAPPDATA%\Camera Info\Shutter History`.
 
 A decrease can also follow a shutter replacement. To investigate a change from before the first scan, compare with an earlier reading or service report for the same camera and counter. On bodies that report in thousands, a reading of `≤ 12,000` represents 11,001 through 12,000 actuations. A range can stay the same while the shutter is used. A range crossing a usage threshold leaves the zone unassigned.
 
@@ -53,7 +63,7 @@ A decrease can also follow a shutter replacement. To investigate a change from b
 | **Sony ARW and JPEG** | Mechanical count on supported bodies such as the α6700 and α7 V when the file contains that field. Other supported layouts supply a camera-reported count. On the α1 II, α7 V, and α7R VI, a photo taken with the mechanical shutter can carry the mechanical counter. |
 | **Pentax PEF and DNG** | Camera-reported shutter count from the Pentax MakerNote when present. |
 
-Photo import runs locally. The usage zone requires a mechanical count and a published durability rating. Shutter history records live USB counts. [Nikon metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Nikon.pm) · [Nikon durability ratings](https://www.nikonimgsupport.com/eu/BV_article?articleNo=000044853&configured=1&lang=en_GB&setRedirect=true) · [Fujifilm metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/FujiFilm.pm) · [Sony metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Sony.pm) · [Pentax metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Pentax.pm)
+Photo import runs locally. The usage zone requires a mechanical count and a published durability rating. Shutter history records live counts. [Nikon metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Nikon.pm) · [Nikon durability ratings](https://www.nikonimgsupport.com/eu/BV_article?articleNo=000044853&configured=1&lang=en_GB&setRedirect=true) · [Fujifilm metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/FujiFilm.pm) · [Sony metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Sony.pm) · [Pentax metadata](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/Pentax.pm)
 
 ## Canon USB support
 

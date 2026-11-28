@@ -50,7 +50,7 @@ internal static partial class Program
         var window = new MainWindow(preferencePath);
         RunScanCheck(window, async () =>
         {
-            window.ShowUsbReading(new("Nikon D850", "Nikon", "1", "1.00", 72, null), null);
+            window.ShowLiveReading(new("Nikon D850", "Nikon", "1", "1.00", 72, null), null);
             Check(Label(window, "HelpText").StartsWith("Select “Scan for cameras” to refresh camera details over USB. " +
                 "For the shutter count, select “Open original photo” and choose a recent original NEF / JPEG photo from this camera.",
                 StringComparison.Ordinal), "Nikon USB distinguishes rescanning camera details from opening a photo for the count");

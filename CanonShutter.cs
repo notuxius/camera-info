@@ -149,6 +149,7 @@ internal sealed class CanonEosEvents(CanonCounterProtocol protocol)
     internal uint? ScalarRelease { get; private set; }
     internal ShutterCount? MechanicalRelease { get; private set; }
     internal uint? DeviceErrorCode { get; private set; }
+    internal uint? Battery { get; private set; }
 
     internal bool HasMechanical => MechanicalRelease.HasValue ||
         (protocol == CanonCounterProtocol.Legacy && Legacy.HasValue);
@@ -175,6 +176,8 @@ internal sealed class CanonEosEvents(CanonCounterProtocol protocol)
                     uint value = BinaryPrimitives.ReadUInt32LittleEndian(payload);
                     if (property == ErrorForDisplay)
                         DeviceErrorCode = value;
+                    if (property == 0xD111)
+                        Battery = value switch { 1 => 50u, 2 => 100u, 4 => 75u, 5 => 25u, _ => null };
                     if (value != uint.MaxValue)
                     {
                         if (property == CanonShutter.LegacyProperty)

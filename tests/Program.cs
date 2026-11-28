@@ -32,6 +32,7 @@ internal static partial class Program
         Task.Run(CheckCameraEmulation).GetAwaiter().GetResult();
         Task.Run(CheckNikonUsb).GetAwaiter().GetResult();
         Task.Run(CheckAdditionalUsbCameras).GetAwaiter().GetResult();
+        Task.Run(CheckWifiCamera).GetAwaiter().GetResult();
         CheckCompanionApps();
 
         int cameras = Task.Run(() => WindowsCamera.Find().Count).GetAwaiter().GetResult();
@@ -65,7 +66,7 @@ internal static partial class Program
         var systemBackground = ((SolidColorBrush)window.Background).Color;
         Check(buttons.Single(button => button.IsChecked == true) == systemButton && !File.Exists(themePath), "Theme defaults to System");
 
-        window.ShowUsbReading(ExampleReading(87_000) with
+        window.ShowLiveReading(ExampleReading(87_000) with
         {
             Count = new(87_000, CountKind.Mechanical, IsUpperBound: true), DeviceErrorCode = 2
         }, null);
@@ -78,10 +79,10 @@ internal static partial class Program
         var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
         var devicePicker = (ComboBox)window.FindName("DevicePicker");
         var languagePicker = (ComboBox)dialog.FindName("LanguagePicker");
-        foreach (var (theme, background, primary, input, secondary, focus) in new[]
+        foreach (var (theme, background, primary, primaryText, input, secondary, focus) in new[]
         {
-            (AppTheme.Light, "#F2F7FB", "#2399B6", "#FCFEFF", "#FCFEFF", "#205575"),
-            (AppTheme.Dark, "#141B21", "#83B9D3", "#1B2730", "#293D4B", "#A5CFE3")
+            (AppTheme.Light, "#F2F7FB", "#147891", "#FFFFFF", "#FCFEFF", "#FCFEFF", "#205575"),
+            (AppTheme.Dark, "#141B21", "#83B9D3", "#0F2635", "#1B2730", "#293D4B", "#A5CFE3")
         })
         {
             var selected = buttons.Single(button => (AppTheme)button.Tag == theme);
@@ -97,6 +98,7 @@ internal static partial class Program
             CheckCameraIcon(window, "ScaleElevated", $"The camera error uses the shutter scale's {theme} yellow");
             Check(scan.Background == manualCount.SelectionBrush && scan.Foreground == manualCount.SelectionTextBrush &&
                 ((SolidColorBrush)scan.Background).Color == (Color)ColorConverter.ConvertFromString(primary) &&
+                ((SolidColorBrush)scan.Foreground).Color == (Color)ColorConverter.ConvertFromString(primaryText) &&
                 ((SolidColorBrush)openPhoto.Background).Color == (Color)ColorConverter.ConvertFromString(secondary),
                 $"Primary and secondary controls adopt the {theme} palette");
             Check(languagePicker.Background == devicePicker.Background && devicePicker.Background == manualCount.Background &&
@@ -144,12 +146,13 @@ internal static partial class Program
         CheckScanWithShutterReadDisconnect(preferencePath, Path.Combine(testDirectory, "read-disconnect-history"));
         CheckNikonPhotos(preferencePath, testDirectory, renderFolder);
         CheckAdditionalPhotos(preferencePath, testDirectory, renderFolder);
+        CheckWifiDashboard(window, Path.Combine(testDirectory, "wifi-history"), renderFolder);
         CheckShutterHistory(window, renderFolder);
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "shutter-decrease");
         foreach (var (count, zone) in new[] { (32_000u, "Low usage"), (87_000u, "Elevated usage"), (165_000u, "High usage") })
         {
-            window.ShowUsbReading(ExampleReading(count), null);
+            window.ShowLiveReading(ExampleReading(count), null);
             Check(Label(window, "ZoneText") == zone && Label(window, "CountText") == count.ToString("N0"), "Dashboard renders the correct usage status");
             Check(((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed, "A reading without a USB counter property hides history");
             Check(Label(window, "CameraErrorText") == "Internal camera error status unavailable." &&
@@ -159,12 +162,12 @@ internal static partial class Program
             if (renderFolder is not null)
                 Render(dashboard, renderFolder, zone.Split(' ')[0].ToLowerInvariant());
         }
-        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 2 }, null);
+        window.ShowLiveReading(ExampleReading(87_000) with { DeviceErrorCode = 2 }, null);
         Check(Label(window, "CameraErrorText") == "Possible Err 02 — the camera could not access the memory card (0x00000002)." &&
             Label(window, "CameraErrorActionText") ==
                 "Confirm the code on the camera display first. If you use a memory card, turn the camera off and reinsert it or try a compatible spare. Reconnect and rescan.",
             "Single-digit Canon errors use the on-camera number format and get targeted advice");
-        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 0xFFFF001E }, null);
+        window.ShowLiveReading(ExampleReading(87_000) with { DeviceErrorCode = 0xFFFF001E }, null);
         Check(Label(window, "CameraErrorText") == "Unknown camera error (0xFFFF001E). Check the camera display for details." &&
             Label(window, "CameraErrorActionText") == "Follow any instructions shown there. If the error returns, save the code or message for support.",
             "An unknown value keeps all its bits and shows generic support advice");
@@ -285,7 +288,7 @@ internal static partial class Program
 
         foreach (LanguageOption option in Languages.Options)
         {
-            window.ShowUsbReading(ExampleReading(87_000) with { Battery = 20, DeviceErrorCode = 0x1E }, null);
+            window.ShowLiveReading(ExampleReading(87_000) with { Battery = 20, DeviceErrorCode = 0x1E }, null);
             var catalog = Languages.Catalog(option);
             Check(original.Keys.ToHashSet().SetEquals(catalog.Keys), $"{option.Code} has all messages");
             foreach (var (key, message) in catalog)
@@ -299,6 +302,7 @@ internal static partial class Program
             var direction = option.Code is "ar" or "arz" or "ur" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
             Check(window.FlowDirection == direction, $"{option.Code} has the expected layout direction");
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
+            Check((string)((Button)window.FindName("WifiButton")).Content == catalog["ScanWifi"], "The Wi-Fi scan button updates on language selection");
             Check((string)((Button)window.FindName("OpenPhotoButton")).Content == catalog["OpenPhoto"], "The photo button updates on language selection");
             Check((string)settingsButton.Content == catalog["Settings"], $"The Settings button updates to {option.Code}");
             Check(Label(window, "CompanionHeading") == catalog["CompanionApps"] &&
@@ -331,10 +335,10 @@ internal static partial class Program
         if (renderFolder is not null)
         {
             picker.SelectedItem = Languages.Options.Single(option => option.Code == "ar");
-            window.ShowUsbReading(reading, new(100_000, new(101_000, 100_000, DateTimeOffset.Now)));
+            window.ShowLiveReading(reading, new(100_000, new(101_000, 100_000, DateTimeOffset.Now)));
             Render((Grid)window.FindName("Dashboard"), renderFolder, "rounded-ar", 786, 880);
         }
-        window.ShowUsbReading(reading, new(101_000, new(101_000, 100_000, DateTimeOffset.Now)));
+        window.ShowLiveReading(reading, new(101_000, new(101_000, 100_000, DateTimeOffset.Now)));
         var manualCount = (TextBox)window.FindName("ManualCount");
         var applyCount = (Button)window.FindName("ApplyCountButton");
         manualCount.Text = "abc";
@@ -345,7 +349,7 @@ internal static partial class Program
         applyCount.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         picker.SelectedItem = english;
         Check(Label(window, "CountText") == "99,500" && Label(window, "SourceValue") == "Manual count" &&
-            Label(window, "ShutterHistoryText") == "USB shutter count bound decreased from ≤ 101,000 to ≤ 100,000.",
+            Label(window, "ShutterHistoryText") == "Shutter count bound decreased from ≤ 101,000 to ≤ 100,000.",
             "A localized manual count and USB history survive switching languages");
 
         File.WriteAllText(preferencePath, "unknown");
@@ -439,13 +443,13 @@ internal static partial class Program
             var boundReading = reading with { Count = new(100_000, CountKind.Mechanical, 0xD167, IsUpperBound: true) };
             var boundHistory = ShutterHistory.TryRecord(boundReading, folder.FullName);
             Check(boundHistory is { PreviousCount: null, LastDecrease: null }, "A mechanical bound starts a new baseline alongside the old scalar counter");
-            window.ShowUsbReading(boundReading, boundHistory);
+            window.ShowLiveReading(boundReading, boundHistory);
             Check(Label(window, "CountText") == "≤ 100,000" && Label(window, "UsageNote").Contains("99,001–100,000"), "Dashboard displays the reported interval");
             Check(Label(window, "ZoneText") == "Usage unavailable" && Label(window, "ShutterHistoryText").Contains("bound of ≤ 100,000"), "Wear and history respect the interval");
             Check(((StackPanel)window.FindName("ManualPanel")).Visibility == Visibility.Visible, "An exact manual reading is still available for a rounded count");
             if (renderFolder is not null)
                 Render((Grid)window.FindName("Dashboard"), renderFolder, "rounded-count");
-            window.ShowUsbReading(boundReading with { Count = new(101_000, CountKind.Mechanical, 0xD167, IsUpperBound: true) }, null);
+            window.ShowLiveReading(boundReading with { Count = new(101_000, CountKind.Mechanical, 0xD167, IsUpperBound: true) }, null);
             Check(Label(window, "PercentText") == "≤ 50.5%" && Label(window, "ZoneText") == "Elevated usage", "A range inside one wear zone shows the upper bound");
 
             var decreased = reading with { Count = new(0, CountKind.Unspecified, 0xD167) };
@@ -454,10 +458,10 @@ internal static partial class Program
             var recovered = ShutterHistory.TryRecord(increased, folder.FullName);
             Check(recovered is { PreviousCount: 0 } && recovered.Value.LastDecrease == drop?.LastDecrease, "The most recent drop survives an increase");
 
-            window.ShowUsbReading(increased, recovered);
+            window.ShowLiveReading(increased, recovered);
             Check(Label(window, "ShutterHistoryText").Contains("Last observed decrease was from 42,001 to 0"), "A past decrease remains visible");
-            window.ShowUsbReading(decreased, drop);
-            Check(Label(window, "ShutterHistoryText") == "USB shutter count decreased from 42,001 to 0.", "A decrease shows the previous and current counts");
+            window.ShowLiveReading(decreased, drop);
+            Check(Label(window, "ShutterHistoryText") == "Shutter count decreased from 42,001 to 0.", "A decrease shows the previous and current counts");
         }
         finally
         {
@@ -481,7 +485,7 @@ internal static partial class Program
             throw new Exception(label);
     }
 
-    private static void Render(Grid dashboard, string folder, string name, double width = 1024, double height = 720)
+    private static void Render(FrameworkElement dashboard, string folder, string name, double width = 1024, double height = 720)
     {
         Directory.CreateDirectory(folder);
         var size = new Size(width, height);

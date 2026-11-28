@@ -160,12 +160,12 @@ internal static partial class Program
             Check(manager.Scans == 2 && Equals(picker.SelectedItem, camera) && reads.Count == 0 &&
                 Label(window, "ConnectionText") == "Connected over USB" && Label(window, "CountText") == "≤ 100,000" &&
                 Label(window, "ZoneText") == "Usage unavailable" &&
-                Label(window, "ShutterHistoryText") == "USB shutter count bound decreased from ≤ 101,000 to ≤ 100,000.",
+                Label(window, "ShutterHistoryText") == "Shutter count bound decreased from ≤ 101,000 to ≤ 100,000.",
                 "A rescan discovers the camera again and updates the dashboard and saved history");
             Check(Label(window, "CameraErrorText") == "The camera reported no active error." &&
                 ((TextBlock)window.FindName("CameraErrorActionText")).Visibility == Visibility.Collapsed &&
                 Label(window, "CameraWarningsText") ==
-                    "A decrease was recorded in the USB shutter count.\nCompare with an earlier reading or service report for this camera.",
+                    "A decrease was recorded in the shutter count.\nCompare with an earlier reading or service report for this camera.",
                 "A rescan clears the resolved warnings and shows the recorded shutter count decrease");
             CheckCameraIcon(window, "ScaleLow", "A successful read with no active camera error uses green");
         });
@@ -180,7 +180,7 @@ internal static partial class Program
 
         RunScanCheck(window, async () =>
         {
-            window.ShowUsbReading(ExampleReading(87_000), null);
+            window.ShowLiveReading(ExampleReading(87_000), null);
             await ClickScanAsync(window);
             Check(manager.Scans == 1, "The scan runs discovery");
             CheckNoCameraFound(window);
@@ -239,7 +239,7 @@ internal static partial class Program
             await ClickScanAsync(window);
             Check(manager.Scans == 4 && Equals(picker.SelectedItem, camera) && reads.Count == 0 &&
                 Label(window, "ConnectionText") == "Connected over USB" && Label(window, "CountText") == "≤ 102,000" &&
-                Label(window, "ShutterHistoryText") == "USB shutter count bound increased from ≤ 101,000 to ≤ 102,000.",
+                Label(window, "ShutterHistoryText") == "Shutter count bound increased from ≤ 101,000 to ≤ 102,000.",
                 "A scan after reconnecting recovers the dashboard and compares against the last successful reading");
         });
         Console.WriteLine("End-to-end scan with a camera disconnect and reconnect passed.");
@@ -288,7 +288,7 @@ internal static partial class Program
             await ClickScanAsync(window);
             Check(manager.Scans == 4 && reads.Count == 0 && Label(window, "ConnectionText") == "Connected over USB" &&
                 Label(window, "CountText") == "≤ 103,000" &&
-                Label(window, "ShutterHistoryText") == "USB shutter count bound increased from ≤ 101,000 to ≤ 103,000.",
+                Label(window, "ShutterHistoryText") == "Shutter count bound increased from ≤ 101,000 to ≤ 103,000.",
                 "After reconnecting, history compares against the last complete shutter reading");
         });
         Console.WriteLine("End-to-end scan with a disconnect during the shutter-count transfer passed.");

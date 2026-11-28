@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     private double? _ratio;
     private bool _busy;
     private bool _updatingList;
+    private IPAddress? _lastWifiAddress;
     private string _connectionKey = "NoCameraDetected";
     private (string Key, string? Argument)? _helpOverride;
     private readonly string _languagePath;
@@ -94,6 +96,27 @@ public partial class MainWindow : Window
     }
 
     private async void OnScan(object sender, RoutedEventArgs e) => await ScanAsync();
+
+    private async void OnScanWifi(object sender, RoutedEventArgs e)
+    {
+        if (_busy)
+            return;
+        var dialog = new WifiScanWindow(_language, _messages, _lastWifiAddress) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Reading is not { } reading)
+            return;
+
+        _lastWifiAddress = dialog.Address;
+        SetBusy(true);
+        try
+        {
+            var comparison = await Task.Run(() => ShutterHistory.TryRecord(reading, _historyDirectory));
+            ResetManual();
+            DevicePicker.SelectedItem = null;
+            DevicePicker.Visibility = Visibility.Collapsed;
+            ShowLiveReading(reading, comparison);
+        }
+        finally { SetBusy(false); }
+    }
 
     private async void OnOpenPhoto(object sender, RoutedEventArgs e)
     {
@@ -208,7 +231,7 @@ public partial class MainWindow : Window
                 var reading = _readCamera(device);
                 return (reading, ShutterHistory.TryRecord(reading, _historyDirectory));
             });
-            ShowUsbReading(reading, comparison);
+            ShowLiveReading(reading, comparison);
         }
         catch (CameraDisconnectedException error)
         {
@@ -230,12 +253,12 @@ public partial class MainWindow : Window
     private static bool IsUsbError(Exception error) =>
         error is COMException or UnauthorizedAccessException or InvalidCastException or IOException;
 
-    internal void ShowUsbReading(CameraReading reading, ShutterComparison? comparison)
+    internal void ShowLiveReading(CameraReading reading, ShutterComparison? comparison)
     {
         _reading = reading;
         _shutterComparison = comparison;
         ShowReading();
-        SetConnection("UsbConnected", "Green");
+        SetConnection(reading.Source == ReadingSource.Wifi ? "WifiConnected" : "UsbConnected", "Green");
     }
 
     private void ShowReading()
@@ -258,10 +281,10 @@ public partial class MainWindow : Window
         SerialValue.Text = _reading?.Serial ?? "—";
         FirmwareValue.Text = _reading?.Firmware ?? "—";
         BatteryValue.Text = _reading?.Battery is uint battery ? FormatLocalizedPercent(battery / 100m, "P0") : "—";
-        bool isPhoto = _reading is { Source: not ReadingSource.Usb };
-        string? photoFormat = _reading is { Source: ReadingSource.Usb, Count: null } ? PhotoFormatFor(_reading) : null;
+        bool isPhoto = _reading is { IsLive: false };
+        string? photoFormat = _reading is { IsLive: true, Count: null } ? PhotoFormatFor(_reading) : null;
         SourceValue.Text = _reading is null ? "—" : _manual is not null ? T("ManualCount")
-            : _reading.Source.ToString().ToUpperInvariant();
+            : _reading.Source == ReadingSource.Wifi ? "Wi-Fi" : _reading.Source.ToString().ToUpperInvariant();
         RatingLink.NavigateUri = rating is null ? null : new Uri(rating.Source);
         RatingLinkRow.Visibility = rating is null ? Visibility.Collapsed : Visibility.Visible;
 
@@ -328,6 +351,8 @@ public partial class MainWindow : Window
             HelpText.Text = T("ConnectHelp", T("Scan"), T("OpenPhoto")) + " " + T("PhotoFormatsHelp");
         else if (allowManual && useFujifilmXApp)
             HelpText.Text = T("FujifilmManualHelp");
+        else if (_reading.Source == ReadingSource.Wifi)
+            HelpText.Text = T("WifiRefresh", T("ScanWifi")) + (allowManual ? " " + T("ManualHelp") : "");
         else if (photoFormat is not null)
             HelpText.Text = T("UsbPhotoHelp", photoFormat, T("Scan"), T("OpenPhoto")) +
                 (allowManual ? " " + T("ManualHelp") : "");
@@ -467,7 +492,7 @@ public partial class MainWindow : Window
             warnings.Add((T("IssueLowBattery", BatteryValue.Text), T("FixChargeBattery")));
         if (usage is { Zone: UsageZone.High })
             warnings.Add((T("IssueHighShutterUsage", PercentText.Text), T("FixHighShutterUsage")));
-        if (_reading is { Source: ReadingSource.Usb, Count.UsbProperty: not null } && _shutterComparison?.LastDecrease is not null)
+        if (_reading is { IsLive: true, Count.UsbProperty: not null } && _shutterComparison?.LastDecrease is not null)
             warnings.Add((T("IssueShutterCountDecreased"), T("FixShutterCountDecreased")));
 
         CameraWarningsText.Text = string.Join("\n\n", warnings.Select(warning => $"{warning.Message}\n{warning.Action}"));
@@ -549,6 +574,7 @@ public partial class MainWindow : Window
     {
         _busy = busy;
         ScanButton.IsEnabled = !busy;
+        WifiButton.IsEnabled = !busy;
         OpenPhotoButton.IsEnabled = !busy;
         DevicePicker.IsEnabled = !busy;
     }
@@ -560,7 +586,7 @@ public partial class MainWindow : Window
         ConnectionDot.SetResourceReference(Shape.FillProperty, brush);
         CameraStatusIcon.SetResourceReference(Shape.StrokeProperty, key switch
         {
-            "UsbConnected" or "PhotoOpened" => _reading?.DeviceErrorCode is > 0 ? "ScaleElevated" : "ScaleLow",
+            "UsbConnected" or "WifiConnected" or "PhotoOpened" => _reading?.DeviceErrorCode is > 0 ? "ScaleElevated" : "ScaleLow",
             "ScanFailed" or "OpenFailed" or "CameraDisconnected" or "PhotoOpenFailed" => "ScaleHigh",
             _ => "Secondary"
         });

@@ -158,7 +158,7 @@ internal static partial class Program
             return (lumix, nikon, fuji, sony, leica);
         }).GetAwaiter().GetResult();
 
-        window.ShowUsbReading(lumix, null);
+        window.ShowLiveReading(lumix, null);
         Check(Label(window, "CameraWarningsText") ==
             "A camera storage volume is full.\nUse another card or back up your files before deleting any.\n\n" +
             "The camera reported that storage is unavailable.\nIf you use a memory card, turn the camera off and reinsert it or try a compatible spare. Reconnect and rescan.",
@@ -166,23 +166,23 @@ internal static partial class Program
         if (renderFolder is not null)
             Render((Grid)window.FindName("Dashboard"), renderFolder, "usb-storage-issues", 786, 880);
 
-        window.ShowUsbReading(nikon, null);
+        window.ShowLiveReading(nikon, null);
         Check(Label(window, "CameraErrorText") == "The camera’s error indicator is active. Check its display for details." &&
             Label(window, "CameraErrorActionText") == "Follow any instructions shown there. If the error returns, save the code or message for support." &&
             Label(window, "CameraWarningsText") ==
                 "The camera reported unformatted storage.\nBack up any files before formatting the card in the camera. You can also try another compatible card.",
             "A Nikon display warning and a Nikon storage response both reach the dashboard");
 
-        window.ShowUsbReading(fuji, null);
+        window.ShowLiveReading(fuji, null);
         Check(Label(window, "CameraErrorText") == "Unknown camera error (0x00000002). Check the camera display for details.",
             "Fujifilm error codes with no verified mapping keep their value");
 
-        window.ShowUsbReading(sony, null);
+        window.ShowLiveReading(sony, null);
         Check(Label(window, "CameraErrorText") == "The camera reported an overheating warning." &&
             Label(window, "CameraErrorActionText") == "Turn the camera off and let it cool before turning it back on." &&
             Label(window, "CameraWarningsText") == "", "Sony thermal status is decoded and old storage issues are cleared");
 
-        window.ShowUsbReading(leica, null);
+        window.ShowLiveReading(leica, null);
         Check(Label(window, "CameraErrorText") == "Internal camera error status unavailable." &&
             Label(window, "CameraErrorActionText") == "" && Label(window, "CameraWarningsText") == "",
             "Placeholder storage data and an empty PTP storage list do not imply a camera fault");
@@ -225,7 +225,7 @@ internal static partial class Program
             var googlePlay = (Hyperlink)window.FindName("GooglePlayLink");
             var compatibility = (Hyperlink)window.FindName("CompatibilityLink");
             Check(companionPanel.Visibility == Visibility.Collapsed, "No reading hides the companion section");
-            window.ShowUsbReading(new("X-E5", "FUJIFILM", "TEST", "1.10", null, null), null);
+            window.ShowLiveReading(new("X-E5", "FUJIFILM", "TEST", "1.10", null, null), null);
             Check(((StackPanel)window.FindName("ManualPanel")).Visibility == Visibility.Visible &&
                 Label(window, "HelpText").Contains("Number of shutter movements"), "X-E5 USB points to the XApp counter");
             Check(companionPanel.Visibility == Visibility.Visible && Label(window, "CompanionAppName") == "FUJIFILM XApp" &&
@@ -292,18 +292,18 @@ internal static partial class Program
             Check(Label(window, "SourceValue") == "DNG" && Label(window, "CountText") == "495" &&
                 Label(window, "ReadingLabel") == "Camera-reported shutter count", "Pentax DNG private data yields the reported count");
 
-            window.ShowUsbReading(new("Nikon D750", "Nikon", null, null, null, null), null);
+            window.ShowLiveReading(new("Nikon D750", "Nikon", null, null, null, null), null);
             Check(appStore.NavigateUri is null && googlePlay.NavigateUri is not null,
                 "An Android-only model clears the previous App Store link");
             Check(DesktopLinks().Select(link => link.NavigateUri.AbsolutePath).SequenceEqual(
                 ["/en/download/sw/279.html", "/en/download/sw/220.html"]) &&
                 DesktopLinks().All(link => link.Inlines.OfType<Run>().Single().Text == "Windows"),
                 "The Windows dashboard shows only the matching D750 desktop links");
-            window.ShowUsbReading(new("ILCE-7M4", "Sony", null, null, null, null), null);
+            window.ShowLiveReading(new("ILCE-7M4", "Sony", null, null, null, null), null);
             Check(appStore.NavigateUri is null && googlePlay.NavigateUri is null && compatibility.NavigateUri.Host == "www.sony.com" &&
                 DesktopLinks().All(link => link.NavigateUri.Host == "support.d-imaging.sony.co.jp") && desktopRows.Children.Count == 2,
                 "An unresolved mobile match shows its compatibility link alongside independent desktop tools");
-            window.ShowUsbReading(new("Canon EOS 5D Mark III", "Canon", null, null, null, null), null);
+            window.ShowLiveReading(new("Canon EOS 5D Mark III", "Canon", null, null, null, null), null);
             Check(companionPanel.Visibility == Visibility.Visible && appStore.NavigateUri is null && googlePlay.NavigateUri is null &&
                 compatibility.NavigateUri is null && DesktopLinks().Any(link => link.NavigateUri.AbsolutePath.EndsWith("/eu.html")),
                 "A camera with desktop apps only still shows the companion section");
@@ -314,7 +314,7 @@ internal static partial class Program
                 "On Windows a macOS-only app shows a notice without an installer link");
             if (renderFolder is not null)
                 Render((Grid)window.FindName("Dashboard"), renderFolder, "desktop-companion-apps", width: 820, height: 860);
-            window.ShowUsbReading(new("X-E50", "Fujifilm", null, null, null, null), null);
+            window.ShowLiveReading(new("X-E50", "Fujifilm", null, null, null, null), null);
             Check(companionPanel.Visibility == Visibility.Collapsed && desktopRows.Children.Count == 0 && compatibility.NavigateUri is null &&
                 !Label(window, "HelpText").Contains("XApp"), "An unlisted camera clears companion links and XApp guidance");
 

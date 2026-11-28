@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 internal sealed record LanguageOption(string Code, string Name, string CultureName)
 {
@@ -39,7 +39,7 @@ internal static class Languages
 
     internal static IReadOnlyDictionary<string, string> Catalog(LanguageOption option)
     {
-        using var stream = typeof(Languages).Assembly.GetManifestResourceStream($"CameraInfo.Locales.{option.Code}.json")!;
+        using var stream = typeof(Languages).Assembly.GetManifestResourceStream($"CameraInspector.Locales.{option.Code}.json")!;
         return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
     }
 

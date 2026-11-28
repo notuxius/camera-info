@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Navigation;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 public partial class MainWindow : Window
 {

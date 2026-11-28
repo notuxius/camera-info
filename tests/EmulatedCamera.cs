@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using CameraInfo;
+using CameraInspector;
 
 internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[] exchanges) :
     IPortableDevice, IPortableDeviceContent, IPortableDeviceProperties
@@ -45,7 +45,7 @@ internal sealed class EmulatedCamera(CameraDevice camera, params CameraExchange[
     public void Open(string id, IPortableDeviceValues client)
     {
         Require(!_opened && id == camera.Id, "device ID passed to Open");
-        Require(client.GetStringValue(new(Client, 2), out var name) >= 0 && name == "Camera Info", "WPD client name");
+        Require(client.GetStringValue(new(Client, 2), out var name) >= 0 && name == "Camera Inspector", "WPD client name");
         int status = client.GetUnsignedIntegerValue(new(Client, 9), out uint access);
         if (++_opens == 1)
         {

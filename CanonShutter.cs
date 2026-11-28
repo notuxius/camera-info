@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text.RegularExpressions;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 internal enum CanonCounterProtocol { Unknown, Legacy, Monitor, ReleaseEvent }
 

@@ -17,22 +17,22 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Run headless checks
-        run: dotnet run --project tests/CameraInfo.Checks.csproj -c Release
+        run: dotnet run --project tests/CameraInspector.Checks.csproj -c Release
       - name: Publish framework-dependent executable
         run: |
-          dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained false `
+          dotnet publish CameraInspector.csproj -c Release -r win-x64 --self-contained false `
             -p:PublishSingleFile=true `
             -p:DebugType=None --source https://api.nuget.org/v3/index.json -o dist/win-x64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $files = @(Get-ChildItem -LiteralPath dist/win-x64)
-          if ($files.Count -ne 1 -or $files[0].Name -ne 'CameraInfo.exe') {
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'CameraInspector.exe') {
             throw 'Expected one executable in the publish directory.'
           }
-          Rename-Item -LiteralPath dist/win-x64/CameraInfo.exe -NewName CameraInfo-win-x64.exe
-          Get-FileHash -LiteralPath dist/win-x64/CameraInfo-win-x64.exe -Algorithm SHA256
+          Rename-Item -LiteralPath dist/win-x64/CameraInspector.exe -NewName CameraInspector-win-x64.exe
+          Get-FileHash -LiteralPath dist/win-x64/CameraInspector-win-x64.exe -Algorithm SHA256
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: CameraInfo-win-x64
-          path: dist/win-x64/CameraInfo-win-x64.exe
+          name: CameraInspector-win-x64
+          path: dist/win-x64/CameraInspector-win-x64.exe
           if-no-files-found: error

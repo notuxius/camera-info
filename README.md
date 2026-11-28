@@ -1,26 +1,26 @@
-# Camera Info
+# Camera Inspector
 
 A Windows utility for reading Canon cameras over USB and comparing mechanical shutter usage with Canon’s published durability ratings.
 
 ## Download
 
-Download [Camera Info for Windows x64](https://github.com/notuxius/camera-info/releases/latest/download/CameraInfo-win-x64.exe). The EXE requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
+Download the Windows x64 executable from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). The EXE requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
 
 ## Example dashboard
 
-![Camera Info dashboard showing 87,000 mechanical shutter actuations on a Canon EOS 5D Mark III](docs/dashboard-example.png)
+![Camera Inspector dashboard showing 87,000 mechanical shutter actuations on a Canon EOS 5D Mark III](docs/dashboard-example.png)
 
 ## Use the app
 
 1. Connect the camera to your PC with a USB data cable and switch it on.
 2. If the camera asks for a USB mode, choose photo import, remote control, or PC connection.
-3. Open Camera Info and select **Scan for cameras**. Close Canon EOS Utility if it is holding the connection.
+3. Open Camera Inspector and select **Scan for cameras**. Close Canon EOS Utility if it is holding the connection.
 
-Use the **Language** menu at the top of the window to switch the interface. Camera Info remembers your selection the next time you open it.
+Use the **Language** menu at the top of the window to switch the interface. Camera Inspector remembers your selection the next time you open it.
 
 Select **About** to see the installed version and open the supported camera list.
 
-Camera Info displays the model, firmware, serial number, battery charge, and shutter count when the camera supplies them. USB discovery works through Windows Portable Devices. The app displays uncertain counters as reported and leaves the usage status gray. When the camera supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a Canon rating is available.
+Camera Inspector displays the model, firmware, serial number, battery charge, and shutter count when the camera supplies them. USB discovery works through Windows Portable Devices. The app displays uncertain counters as reported and leaves the usage status gray. When the camera supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a Canon rating is available.
 
 The first USB scan with a serial number saves a baseline on this PC. Later scans compare the same camera model, serial number, and Canon counter. The dashboard shows whether the count changed and remembers the most recent decrease. History is stored under `%LOCALAPPDATA%\Camera Info\Shutter History`.
 
@@ -49,10 +49,10 @@ These thresholds are app-defined. The rating measures tested shutter durability 
 Use the .NET 10 SDK to build on Windows.
 
 ```powershell
-dotnet publish CameraInfo.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o dist/win-x64
+dotnet publish CameraInspector.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=None -o dist/win-x64
 ```
 
-Run the headless checks with `dotnet run --project tests/CameraInfo.Checks.csproj -c Release`. Pass an output directory after `--` to also render dashboard screenshots without showing a window.
+Run the headless checks with `dotnet run --project tests/CameraInspector.Checks.csproj -c Release`. Pass an output directory after `--` to also render dashboard screenshots without showing a window.
 
 USB transport uses the Windows MTP extensions and Canon’s EOS PTP properties. [Microsoft WPD MTP documentation](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/supporting-mtp-extensions) · [libgphoto2 property definitions](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 
@@ -60,11 +60,11 @@ USB transport uses the Windows MTP extensions and Canon’s EOS PTP properties. 
 
 ## Brand support
 
-Camera Info covers all 24 Canon EOS USB shutter-count routes in emulation. Live Windows hardware validation is pending. Models marked **Planned** have no camera support in Camera Info today.
+Camera Inspector covers all 24 Canon EOS USB shutter-count routes in emulation. Live Windows hardware validation is pending. Models marked **Planned** have no camera support in Camera Inspector today.
 
 See the [backlog](BACKLOG.md) for validation and implementation plans.
 
-| Brand and models | Current support in Camera Info |
+| Brand and models | Current support in Camera Inspector |
 | --- | --- |
 | **Canon EOS:** 5D Mark II, 5D Mark III, 6D, 7D, 7D Mark II, 70D | USB mechanical shutter count via the legacy property, with single-actuation precision |
 | **Canon EOS:** 5D Mark IV, 6D Mark II, 80D | USB mechanical shutter count via Canon diagnostics, with single-actuation precision |

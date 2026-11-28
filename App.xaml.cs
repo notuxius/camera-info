@@ -1,5 +1,5 @@
 using System.Windows;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 public partial class App : Application;

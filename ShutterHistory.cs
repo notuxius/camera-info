@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 internal sealed record ShutterDecrease(uint From, uint To, DateTimeOffset ObservedAt);
 internal readonly record struct ShutterComparison(uint? PreviousCount, ShutterDecrease? LastDecrease);

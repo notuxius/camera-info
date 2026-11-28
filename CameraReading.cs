@@ -1,4 +1,4 @@
-namespace CameraInfo;
+namespace CameraInspector;
 
 internal sealed record CameraDevice(string Id, string? Name)
 {

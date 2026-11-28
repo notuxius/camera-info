@@ -4,7 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using CameraInfo;
+using CameraInspector;
 
 internal static partial class Program
 {

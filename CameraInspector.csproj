@@ -7,13 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Version>0.3.0</Version>
-    <Product>Camera Info</Product>
-    <ApplicationIcon>CameraInfo.ico</ApplicationIcon>
+    <AssemblyTitle>Camera Inspector</AssemblyTitle>
+    <Product>Camera Inspector</Product>
+    <ApplicationIcon>CameraInspector.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
-    <InternalsVisibleTo Include="CameraInfo.Checks" />
-    <Resource Include="CameraInfo.ico" />
-    <EmbeddedResource Include="Locales/*.json" LogicalName="CameraInfo.Locales.%(Filename).json" />
+    <InternalsVisibleTo Include="CameraInspector.Checks" />
+    <Resource Include="CameraInspector.ico" />
+    <EmbeddedResource Include="Locales/*.json" LogicalName="CameraInspector.Locales.%(Filename).json" />
   </ItemGroup>
 </Project>

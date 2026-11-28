@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 internal static class WindowsCamera
 {
@@ -78,7 +78,7 @@ internal static class WindowsCamera
     internal static CameraReading Read(CameraDevice camera, IPortableDevice device)
     {
         using var client = NewValues();
-        client.Value.SetStringValue(new(ClientCategory, 2), "Camera Info");
+        client.Value.SetStringValue(new(ClientCategory, 2), "Camera Inspector");
 
         bool allowCommands = true;
         try

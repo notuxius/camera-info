@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace CameraInfo;
+namespace CameraInspector;
 
 // Method order and types follow PortableDeviceApi.h and PortableDeviceTypes.h.
 // Unused slots are declared only to preserve the IUnknown vtable layout.

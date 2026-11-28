@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using CameraInfo;
+using CameraInspector;
 
 internal static partial class Program
 {
@@ -35,7 +35,7 @@ internal static partial class Program
 
         var app = new App();
         app.InitializeComponent();
-        var folder = Directory.CreateTempSubdirectory("camera-info-language-");
+        var folder = Directory.CreateTempSubdirectory("camera-inspector-language-");
         try
         {
             CheckDashboard(rating, Path.Combine(folder.FullName, "language.txt"), args.Length == 1 ? args[0] : null);
@@ -87,7 +87,7 @@ internal static partial class Program
         Check(panel.Visibility == Visibility.Collapsed, "About starts closed");
         button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(panel.Visibility == Visibility.Visible && Label(window, "VersionText") == $"Version {version}" &&
-            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-info#brand-support-backlog",
+            link.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector#brand-support-backlog",
             "About shows the running app version and links to supported cameras");
         if (renderFolder is not null)
             Render(dashboard, renderFolder, "about", 786);
@@ -227,7 +227,7 @@ internal static partial class Program
 
     private static void CheckShutterHistory(MainWindow window, string? renderFolder)
     {
-        var folder = Directory.CreateTempSubdirectory("camera-info-history-");
+        var folder = Directory.CreateTempSubdirectory("camera-inspector-history-");
         try
         {
             var reading = new CameraReading("Canon EOS R7", "Canon", "12345", null, null, new(42_000, CountKind.Unspecified, 0xD167));

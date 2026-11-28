@@ -394,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "camera-inspector"
-version = "0.10.3"
+version = "0.10.4"
 dependencies = [
  "cc",
  "chrono",

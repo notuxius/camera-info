@@ -42,6 +42,31 @@ pub fn replace(path: &Path, content: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
+pub fn move_legacy_settings(legacy: &Path, settings: &Path) -> io::Result<()> {
+    if !legacy.try_exists()? {
+        return Ok(());
+    }
+    fs::create_dir_all(settings)?;
+    let migration = OpenOptions::new().read(true).write(true).create(true).truncate(false)
+        .open(settings.join("settings-migration.lock"))?;
+    migration.lock()?;
+    for name in ["language.txt", "theme.txt", "wifi-client.txt"] {
+        let old = legacy.join(name);
+        let current = settings.join(name);
+        let result = if current.is_file() {
+            fs::remove_file(old)
+        } else {
+            fs::rename(old, current)
+        };
+        match result {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(())
+}
+
 fn lock(path: &Path) -> io::Result<fs::File> {
     let file = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(path)?;
     file.try_lock().map_err(io::Error::other)?;
@@ -103,6 +128,39 @@ fn compare(directory: &Path, name: &str, count: u32) -> io::Result<Comparison> {
 mod tests {
     use super::*;
     use camera_inspector::camera::{CountKind, ShutterCount, Source};
+
+    #[test]
+    fn moves_legacy_settings_once_and_preserves_the_current_value() {
+        let temporary = tempfile::tempdir().unwrap();
+        let legacy = temporary.path().join("Camera Info");
+        let settings = temporary.path().join("com.notuxius.camera-inspector");
+        let identity = "5b9bce4e-8a76-482a-9ce6-60a27a49749b";
+        fs::create_dir_all(legacy.join("Shutter History")).unwrap();
+        fs::write(legacy.join("Shutter History").join("saved.json"), "history").unwrap();
+        fs::write(legacy.join("window.json"), "old placement").unwrap();
+        fs::write(legacy.join("language.txt"), "uk").unwrap();
+        fs::write(legacy.join("theme.txt"), "Dark").unwrap();
+        fs::write(legacy.join("wifi-client.txt"), identity).unwrap();
+        fs::create_dir(&settings).unwrap();
+        fs::write(settings.join("theme.txt"), "Light").unwrap();
+
+        move_legacy_settings(&legacy, &settings).unwrap();
+        assert_eq!(text(&settings.join("language.txt")), "uk");
+        assert_eq!(text(&settings.join("theme.txt")), "Light");
+        assert_eq!(client_id(&settings).unwrap(), Uuid::parse_str(identity).unwrap());
+        for name in ["language.txt", "theme.txt", "wifi-client.txt"] {
+            assert!(!legacy.join(name).exists());
+        }
+        assert_eq!(text(&legacy.join("Shutter History").join("saved.json")), "history");
+        assert_eq!(text(&legacy.join("window.json")), "old placement");
+        assert!(!settings.join("window.json").exists());
+
+        fs::remove_dir_all(&settings).unwrap();
+        move_legacy_settings(&legacy, &settings).unwrap();
+        for name in ["language.txt", "theme.txt", "wifi-client.txt"] {
+            assert!(!settings.join(name).exists());
+        }
+    }
 
     #[test]
     fn preserves_existing_windows_history_and_distinguishes_upper_bounds() {

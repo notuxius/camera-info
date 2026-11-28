@@ -39,9 +39,9 @@ Automatic discovery looks for Canon EOS cameras advertising PC pairing. Direct I
 
 ### Dashboard
 
-The **Language** and **Theme** settings both default to **System**. Camera Inspector follows the system display language and app color settings, using English if the display language is unavailable. You can also choose a specific language or select **Light** or **Dark** and Camera Inspector will remember your choices. The **About** section in Settings shows the installed version and links to supported cameras and the latest release.
+The **Language** and **Theme** settings both default to **System**. Camera Inspector follows the system display language and app color settings, using English if the display language is unavailable. You can also choose a specific language or select **Light** or **Dark** and Camera Inspector will remember your choices. The **About** section in Settings shows the installed version and links to supported cameras and recent releases.
 
-Camera Inspector restores the dashboard window's size and position when you reopen it.
+Camera Inspector restores the dashboard window's size and position when you reopen it. On Windows, the uninstaller's **Delete app data** option also clears the saved language, theme, and Wi-Fi pairing identity.
 
 Camera Inspector displays the model, firmware, serial number, battery charge, and shutter count when the source supplies them. USB discovery uses Windows Portable Devices on Windows and ImageCaptureCore on macOS. The app displays uncertain counters as reported and leaves the usage status gray. When the reading supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a manufacturer rating is available.
 

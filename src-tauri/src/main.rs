@@ -22,7 +22,8 @@ use tauri_plugin_dialog::DialogExt;
 
 #[derive(Clone)]
 struct Inspector {
-    dir: PathBuf,
+    settings_dir: PathBuf,
+    history_dir: PathBuf,
     devices: Arc<Mutex<Vec<Device>>>,
     operation: Arc<Mutex<()>>,
     cancelled: Arc<AtomicBool>,
@@ -38,7 +39,7 @@ struct Report {
 
 impl Inspector {
     fn report(&self, reading: Reading) -> Report {
-        let comparison = data::history(&self.dir, &reading);
+        let comparison = data::history(&self.history_dir, &reading);
         Report { reading, comparison }
     }
 }
@@ -122,7 +123,7 @@ async fn read_wifi(state: State<'_, Inspector>, address: String) -> Result<Repor
     background(state, move |state| {
         state.cancelled.store(false, Ordering::Relaxed);
         let address = wifi::parse_address(&address).ok_or_else(|| io::Error::other("Invalid camera address."))?;
-        let id = data::client_id(&state.dir)?;
+        let id = data::client_id(&state.settings_dir)?;
         let reading = wifi::read(SocketAddr::from((address, wifi::PORT)), id, &state.cancelled)?;
         Ok(state.report(reading))
     }).await
@@ -175,8 +176,8 @@ fn catalog(language: &str) -> Result<&'static str, &'static str> {
 
 #[tauri::command]
 fn settings(state: State<'_, Inspector>) -> Settings {
-    let language = data::text(&state.dir.join("language.txt"));
-    let theme = data::text(&state.dir.join("theme.txt"));
+    let language = data::text(&state.settings_dir.join("language.txt"));
+    let theme = data::text(&state.settings_dir.join("theme.txt"));
     Settings {
         language: if messages(&language).is_some() { language } else { "system".into() },
         theme: if matches!(theme.as_str(), "Dark" | "Light") { theme } else { "System".into() },
@@ -191,13 +192,13 @@ fn save_language(state: State<'_, Inspector>, language: &str) -> Result<(), Stri
     if language != "system" && messages(language).is_none() {
         return Err("Unknown language.".into());
     }
-    data::replace(&state.dir.join("language.txt"), language.as_bytes()).map_err(error)
+    data::replace(&state.settings_dir.join("language.txt"), language.as_bytes()).map_err(error)
 }
 
 #[tauri::command]
 fn save_theme(state: State<'_, Inspector>, window: WebviewWindow, theme: &str) -> Result<(), String> {
     apply_theme(&window, theme)?;
-    data::replace(&state.dir.join("theme.txt"), theme.as_bytes()).map_err(error)
+    data::replace(&state.settings_dir.join("theme.txt"), theme.as_bytes()).map_err(error)
 }
 
 fn apply_theme(window: &WebviewWindow, theme: &str) -> Result<(), String> {
@@ -345,22 +346,27 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let smoke = env::args().any(|arg| arg == "--smoke-test");
-            let dir = if cfg!(target_os = "windows") {
+            let history_dir = if cfg!(target_os = "windows") {
                 app.path().local_data_dir()?.join("Camera Info")
             } else {
                 app.path().data_dir()?.join("Camera Inspector")
             };
             let window = app.get_webview_window("main").ok_or_else(|| io::Error::other("Missing dashboard window."))?;
-            let placement_dir = if cfg!(target_os = "windows") {
+            let settings_dir = if cfg!(target_os = "windows") {
                 // The Windows uninstaller clears the bundle data directory on request.
-                app.path().app_local_data_dir()?
+                let settings = app.path().app_local_data_dir()?;
+                if !smoke && let Err(error) = data::move_legacy_settings(&history_dir, &settings) {
+                    eprintln!("Could not move legacy settings: {error}");
+                }
+                settings
             } else {
-                dir.clone()
+                history_dir.clone()
             };
-            let center_on_startup = smoke || !restore_window(&window, &placement_dir.join("window.json"));
-            let _ = apply_theme(&window, &data::text(&dir.join("theme.txt")));
+            let center_on_startup = smoke || !restore_window(&window, &settings_dir.join("window.json"));
+            let _ = apply_theme(&window, &data::text(&settings_dir.join("theme.txt")));
             app.manage(Inspector {
-                dir, devices: Arc::default(), operation: Arc::default(), cancelled: Arc::default(), smoke, center_on_startup,
+                settings_dir, history_dir, devices: Arc::default(), operation: Arc::default(),
+                cancelled: Arc::default(), smoke, center_on_startup,
             });
             Ok(())
         })

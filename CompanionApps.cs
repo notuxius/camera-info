@@ -3,7 +3,7 @@ namespace CameraInspector;
 internal sealed record CompanionApp(string? Name, string? AppStore, string? GooglePlay,
     string? Compatibility = null, bool HasMechanicalCount = false);
 
-internal static class CompanionApps
+internal static partial class CompanionApps
 {
     private const string Apple = "https://apps.apple.com/app/id";
     private const string Google = "https://play.google.com/store/apps/details?id=";
@@ -59,6 +59,12 @@ internal static class CompanionApps
         if (reading is null)
             return null;
 
+        var (maker, model) = CameraKey(reading);
+        return MobileFor(reading, maker, model);
+    }
+
+    private static (string Maker, string Model) CameraKey(CameraReading reading)
+    {
         string manufacturer = reading.Maker.Trim().ToUpperInvariant();
         string maker = manufacturer.Split(' ', 2)[0];
         string model = Key(reading.Model);
@@ -77,6 +83,11 @@ internal static class CompanionApps
             _ => RemovePrefix(model, maker)
         };
 
+        return (maker, model);
+    }
+
+    private static CompanionApp? MobileFor(CameraReading reading, string maker, string model)
+    {
         return (maker, model) switch
         {
             ("FUJIFILM", "XE5") => XAppWithCounter,

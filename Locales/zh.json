@@ -95,6 +95,7 @@
   "CompanionApps": "配套应用",
   "CheckAppCompatibility": "检查应用兼容性",
   "CompanionPhotoTransfer": "将照片传输到手机。",
+  "CompanionPlatformOnly": "仅适用于 {0}",
   "VerifiedCount": "经核实的机械快门次数",
   "ApplyCount": "应用次数",
   "Reset": "重置",

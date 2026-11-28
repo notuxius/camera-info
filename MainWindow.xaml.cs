@@ -313,7 +313,7 @@ public partial class MainWindow : Window
         ShowCameraIssues(usage);
 
         var companionApp = CompanionApps.For(_reading);
-        ShowCompanionApp(companionApp);
+        ShowCompanionApps(companionApp, CompanionApps.DesktopFor(_reading));
         bool useFujifilmXApp = companionApp is { HasMechanicalCount: true };
         bool isFujifilm = _reading?.Maker.StartsWith("Fujifilm", StringComparison.OrdinalIgnoreCase) == true;
         bool allowManual = (rating is not null || isFujifilm) &&
@@ -335,9 +335,9 @@ public partial class MainWindow : Window
             HelpText.Text = allowManual ? T("ManualHelp") : T("RefreshHelp", T("Scan"), T("OpenPhoto"));
     }
 
-    private void ShowCompanionApp(CompanionApp? app)
+    private void ShowCompanionApps(CompanionApp? app, IReadOnlyList<DesktopCompanionApp> desktopApps)
     {
-        CompanionPanel.Visibility = app is null ? Visibility.Collapsed : Visibility.Visible;
+        CompanionPanel.Visibility = app is null && desktopApps.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         CompanionAppName.Text = app?.Name ?? "";
         CompanionAppName.Visibility = app?.Name is null ? Visibility.Collapsed : Visibility.Visible;
         CompanionPurpose.Visibility = app is { Compatibility: null, HasMechanicalCount: false }
@@ -345,6 +345,32 @@ public partial class MainWindow : Window
         SetCompanionLink(AppStoreRow, AppStoreLink, app?.AppStore);
         SetCompanionLink(GooglePlayRow, GooglePlayLink, app?.GooglePlay);
         SetCompanionLink(CompatibilityRow, CompatibilityLink, app?.Compatibility);
+
+        bool isMacOS = OperatingSystem.IsMacOS();
+        DesktopCompanionRows.Children.Clear();
+        foreach (var desktopApp in desktopApps)
+        {
+            var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            row.Children.Add(new TextBlock { Text = desktopApp.Name, Margin = new Thickness(0, 0, 12, 0) });
+            var (downloadUrl, platform) = desktopApp.ForPlatform(isMacOS);
+            var label = new TextBlock { Margin = new Thickness(0, 0, 12, 0) };
+            if (downloadUrl is null)
+            {
+                label.Text = T("CompanionPlatformOnly", platform);
+                label.SetResourceReference(TextBlock.ForegroundProperty, "Secondary");
+            }
+            else
+            {
+                var link = new Hyperlink(new Run(platform)) { NavigateUri = new Uri(downloadUrl) };
+                link.SetResourceReference(TextElement.ForegroundProperty, "Accent");
+                System.Windows.Automation.AutomationProperties.SetName(link, $"{desktopApp.Name} — {platform}");
+                link.RequestNavigate += OnOpenLink;
+                label.FlowDirection = FlowDirection.LeftToRight;
+                label.Inlines.Add(link);
+            }
+            row.Children.Add(label);
+            DesktopCompanionRows.Children.Add(row);
+        }
     }
 
     private static void SetCompanionLink(TextBlock row, Hyperlink link, string? url)

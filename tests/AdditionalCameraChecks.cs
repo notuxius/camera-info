@@ -47,7 +47,46 @@ internal static partial class Program
         Check(CompanionApps.For(new("X-E5", "Unknown maker", null, null, null, null)) is null &&
             CompanionApps.For(new("X-E50", "Fujifilm", null, null, null, null)) is null &&
             CompanionApps.For(new("Canon EOS 5D Mark III", "Canon", null, null, null, null)) is null,
-            "Unconfirmed models and makers do not inherit companion links");
+            "Unconfirmed model and maker combinations do not inherit mobile links");
+
+        (string Maker, string Model, string App)[] desktopMatches =
+        [
+            ("Canon", "Canon EOS 5D Mark III", "EOS Utility"),
+            ("Nikon Corporation", "Z5_2C", "NX Tether"),
+            ("Sony", "α7 IV", "Imaging Edge Desktop"),
+            ("Fujifilm", "Fujifilm X-E5", "FUJIFILM X RAW STUDIO"),
+            ("Panasonic", "LUMIX S5 II", "LUMIX Tether"),
+            ("OM Digital Solutions Corporation", "Olympus OM-D E-M1MarkIII", "OM Capture"),
+            ("RICOH IMAGING COMPANY, LTD.", "PENTAX K-3 Mark III Monochrome", "Digital Camera Utility 5"),
+            ("Ricoh", "RICOH GR II", "Digital Camera Utility 5"),
+            ("Leica", "LEICA Q3 Monochrom", "Adobe Lightroom Classic"),
+            ("Hasselblad", "907X & CFV 100C", "Phocus")
+        ];
+        foreach (var (maker, model, appName) in desktopMatches)
+            Check(CompanionApps.DesktopFor(new(model, maker, null, null, null, null)).Any(app =>
+                app.Name == appName && app.Windows is not null && app.MacOS is not null),
+                $"{model} has {appName} for Windows and macOS");
+
+        Check(CompanionApps.DesktopFor(new("X-HF1", "Fujifilm", null, null, null, null)).Count == 0 &&
+            CompanionApps.DesktopFor(new("X-E50", "Fujifilm", null, null, null, null)).Count == 0 &&
+            CompanionApps.DesktopFor(new("X-E5", "Unknown maker", null, null, null, null)).Count == 0,
+            "Desktop apps require a verified model and maker");
+
+        var webcam = CompanionApps.DesktopFor(new("D750", "Nikon", null, null, null, null))
+            .Single(app => app.Name == "Nikon Webcam Utility");
+        Check(webcam.ForPlatform(isMacOS: false) == (webcam.Windows, "Windows") &&
+            webcam.ForPlatform(isMacOS: true) == (webcam.MacOS, "macOS") && webcam.Windows != webcam.MacOS,
+            "A desktop app with separate installers selects the current operating system");
+
+        var shutterCheck = CompanionApps.DesktopFor(new("Canon EOS 5D Mark III", "Canon", null, null, null, null))
+            .Single(app => app.Name == "ShutterCheck");
+        var transmitter = CompanionApps.DesktopFor(new("PENTAX K-3 Mark III Monochrome", "RICOH", null, null, null, null))
+            .Single(app => app.Name == "IMAGE Transmitter 2");
+        Check(shutterCheck.ForPlatform(isMacOS: false) is (null, "macOS") &&
+            shutterCheck.ForPlatform(isMacOS: true) is (not null, "macOS") &&
+            transmitter.ForPlatform(isMacOS: false) is (not null, "Windows") &&
+            transmitter.ForPlatform(isMacOS: true) is (null, "Windows"),
+            "Single-platform desktop apps show an installer on their platform and a notice on the other");
     }
 
     private static void CheckAdditionalUsbCameras()
@@ -181,6 +220,7 @@ internal static partial class Program
         RunScanCheck(window, async () =>
         {
             var companionPanel = (StackPanel)window.FindName("CompanionPanel");
+            var desktopRows = (StackPanel)window.FindName("DesktopCompanionRows");
             var appStore = (Hyperlink)window.FindName("AppStoreLink");
             var googlePlay = (Hyperlink)window.FindName("GooglePlayLink");
             var compatibility = (Hyperlink)window.FindName("CompatibilityLink");
@@ -200,6 +240,9 @@ internal static partial class Program
                 "The X-E5 RAF image count is decoded and displayed without a mechanical usage zone");
             Check(Label(window, "CompanionAppName") == "FUJIFILM XApp" && googlePlay.NavigateUri.Query == "?id=com.fujifilm.xapp",
                 "Importing an X-E5 RAF retains the XApp links");
+            Check(desktopRows.Children.Count == 2 &&
+                DesktopLinks().Any(link => link.NavigateUri.AbsolutePath.EndsWith("/x-raw-studio/")),
+                "Importing an X-E5 RAF shows desktop tools alongside the mobile app");
             var manualCount = (TextBox)window.FindName("ManualCount");
             manualCount.Text = "129";
             ((Button)window.FindName("ApplyCountButton")).RaiseEvent(new(Button.ClickEvent));
@@ -252,12 +295,32 @@ internal static partial class Program
             window.ShowUsbReading(new("Nikon D750", "Nikon", null, null, null, null), null);
             Check(appStore.NavigateUri is null && googlePlay.NavigateUri is not null,
                 "An Android-only model clears the previous App Store link");
+            Check(DesktopLinks().Select(link => link.NavigateUri.AbsolutePath).SequenceEqual(
+                ["/en/download/sw/279.html", "/en/download/sw/220.html"]) &&
+                DesktopLinks().All(link => link.Inlines.OfType<Run>().Single().Text == "Windows"),
+                "The Windows dashboard shows only the matching D750 desktop links");
             window.ShowUsbReading(new("ILCE-7M4", "Sony", null, null, null, null), null);
-            Check(appStore.NavigateUri is null && googlePlay.NavigateUri is null && compatibility.NavigateUri.Host == "www.sony.com",
-                "An unresolved firmware-dependent match shows only the vendor compatibility link");
+            Check(appStore.NavigateUri is null && googlePlay.NavigateUri is null && compatibility.NavigateUri.Host == "www.sony.com" &&
+                DesktopLinks().All(link => link.NavigateUri.Host == "support.d-imaging.sony.co.jp") && desktopRows.Children.Count == 2,
+                "An unresolved mobile match shows its compatibility link alongside independent desktop tools");
+            window.ShowUsbReading(new("Canon EOS 5D Mark III", "Canon", null, null, null, null), null);
+            Check(companionPanel.Visibility == Visibility.Visible && appStore.NavigateUri is null && googlePlay.NavigateUri is null &&
+                compatibility.NavigateUri is null && DesktopLinks().Any(link => link.NavigateUri.AbsolutePath.EndsWith("/eu.html")),
+                "A camera with desktop apps only still shows the companion section");
+            var shutterCheckRow = desktopRows.Children.Cast<WrapPanel>()
+                .Single(row => ((TextBlock)row.Children[0]).Text == "ShutterCheck");
+            var notice = (TextBlock)shutterCheckRow.Children[1];
+            Check(notice.Text == "macOS only" && !notice.Inlines.OfType<Hyperlink>().Any(),
+                "On Windows a macOS-only app shows a notice without an installer link");
+            if (renderFolder is not null)
+                Render((Grid)window.FindName("Dashboard"), renderFolder, "desktop-companion-apps", width: 820, height: 860);
             window.ShowUsbReading(new("X-E50", "Fujifilm", null, null, null, null), null);
-            Check(companionPanel.Visibility == Visibility.Collapsed && compatibility.NavigateUri is null &&
+            Check(companionPanel.Visibility == Visibility.Collapsed && desktopRows.Children.Count == 0 && compatibility.NavigateUri is null &&
                 !Label(window, "HelpText").Contains("XApp"), "An unlisted camera clears companion links and XApp guidance");
+
+            IEnumerable<Hyperlink> DesktopLinks() => desktopRows.Children.Cast<WrapPanel>()
+                .SelectMany(row => row.Children.Cast<TextBlock>())
+                .SelectMany(label => label.Inlines.OfType<Hyperlink>());
         });
         Console.WriteLine("Additional original-photo dashboard checks passed.");
 

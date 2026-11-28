@@ -95,6 +95,7 @@
   "CompanionApps": "Приложения для камеры",
   "CheckAppCompatibility": "Проверить совместимость приложения",
   "CompanionPhotoTransfer": "Переносите фотографии на телефон.",
+  "CompanionPlatformOnly": "Только для {0}",
   "VerifiedCount": "Подтверждённое число срабатываний механического затвора",
   "ApplyCount": "Применить",
   "Reset": "Сбросить",

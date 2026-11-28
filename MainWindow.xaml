@@ -218,6 +218,7 @@
                             </WrapPanel>
                             <TextBlock x:Name="CompanionPurpose" Text="{DynamicResource CompanionPhotoTransfer}"
                                        Foreground="{DynamicResource Secondary}" FontSize="13" TextWrapping="Wrap" Margin="0,3,0,0" />
+                            <StackPanel x:Name="DesktopCompanionRows" />
                         </StackPanel>
                         <StackPanel x:Name="ManualPanel" Orientation="Horizontal" Margin="0,11,0,0" Visibility="Collapsed">
                             <TextBox x:Name="ManualCount" Width="158" VerticalContentAlignment="Center" Padding="7,3" MaxLength="10"

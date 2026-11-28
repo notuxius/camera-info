@@ -81,7 +81,7 @@ internal static partial class Program
         foreach (var (theme, background, primary, input, secondary, focus) in new[]
         {
             (AppTheme.Light, "#F2F7FB", "#2399B6", "#FCFEFF", "#FCFEFF", "#205575"),
-            (AppTheme.Dark, "#111416", "#BBE2EF", "#14181A", "#252B2E", "#2399B6")
+            (AppTheme.Dark, "#141B21", "#83B9D3", "#1B2730", "#293D4B", "#A5CFE3")
         })
         {
             var selected = buttons.Single(button => (AppTheme)button.Tag == theme);

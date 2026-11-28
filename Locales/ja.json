@@ -95,6 +95,7 @@
   "CompanionApps": "連携アプリ",
   "CheckAppCompatibility": "アプリの対応状況を確認",
   "CompanionPhotoTransfer": "写真をスマートフォンに転送します。",
+  "CompanionPlatformOnly": "{0} 専用",
   "VerifiedCount": "確認済みのメカシャッター作動回数",
   "ApplyCount": "回数を適用",
   "Reset": "リセット",

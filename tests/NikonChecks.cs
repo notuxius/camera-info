@@ -60,6 +60,7 @@ internal static partial class Program
                 Label(window, "FirmwareValue") == "1.23" && Label(window, "BatteryValue") == "—" &&
                 Label(window, "ConnectionText") == "Original photo loaded" && Label(window, "SourceValue") == "NEF",
                 "The photo opens with metadata from the file");
+            CheckCameraIcon(window, "ScaleLow", "A successful photo read uses green");
             Check(Label(window, "CountText") == "100,001" && Label(window, "ReadingLabel") == "Mechanical shutter count" &&
                 Label(window, "ZoneText") == "Elevated usage" && ((TextBlock)window.FindName("ShutterHistoryText")).Visibility == Visibility.Collapsed,
                 "The mechanical MakerNote takes precedence and leaves live USB history separate");
@@ -78,6 +79,7 @@ internal static partial class Program
                 await window.ReadPhotoAsync(invalid);
                 Check(Label(window, "ConnectionText") == "Photo could not be opened" && Label(window, "ModelTitle") == "Nikon D750",
                     "An invalid photo shows an error and preserves the previous reading");
+                CheckCameraIcon(window, "ScaleHigh", "A failed photo read uses red even while previous metadata remains visible");
             }
 
             await window.ReadPhotoAsync(missing);

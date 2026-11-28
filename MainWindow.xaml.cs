@@ -558,6 +558,12 @@ public partial class MainWindow : Window
         _connectionKey = key;
         ConnectionText.Text = T(key);
         ConnectionDot.SetResourceReference(Shape.FillProperty, brush);
+        CameraStatusIcon.SetResourceReference(Shape.StrokeProperty, key switch
+        {
+            "UsbConnected" or "PhotoOpened" => _reading?.DeviceErrorCode is > 0 ? "ScaleElevated" : "ScaleLow",
+            "ScanFailed" or "OpenFailed" or "CameraDisconnected" or "PhotoOpenFailed" => "ScaleHigh",
+            _ => "Secondary"
+        });
     }
 
     private void SetHelpOverride(string key, string? argument = null)

@@ -139,6 +139,7 @@ internal static partial class Program
             var picker = (ComboBox)window.FindName("DevicePicker");
             Check(manager.Scans == 0 && picker.Items.Count == 0 && Label(window, "CountText") == "—",
                 "The off-screen window starts before discovery");
+            CheckCameraIcon(window, "Secondary", "The camera icon starts neutral");
 
             await ClickScanAsync(window);
             Check(manager.Scans == 1 && picker.Items.Count == 1 && Equals(picker.SelectedItem, camera) && reads.Count == 1,
@@ -153,6 +154,7 @@ internal static partial class Program
                     "Confirm the code on the camera display first. Turn the camera off and back on. If the error returns, note the code for Canon service." &&
                 Label(window, "CameraWarningsText") == "Low battery (20%).\nRecharge the battery or insert a charged spare.",
                 "The scan explains the camera error alongside the low battery warning");
+            CheckCameraIcon(window, "ScaleElevated", "A successful read with an active camera error uses yellow");
 
             await ClickScanAsync(window);
             Check(manager.Scans == 2 && Equals(picker.SelectedItem, camera) && reads.Count == 0 &&
@@ -165,6 +167,7 @@ internal static partial class Program
                 Label(window, "CameraWarningsText") ==
                     "A decrease was recorded in the USB shutter count.\nCompare with an earlier reading or service report for this camera.",
                 "A rescan clears the resolved warnings and shows the recorded shutter count decrease");
+            CheckCameraIcon(window, "ScaleLow", "A successful read with no active camera error uses green");
         });
         Console.WriteLine("End-to-end scan and rescan with an emulated camera passed.");
     }
@@ -225,6 +228,7 @@ internal static partial class Program
             Check(Label(window, "ConnectionText") == "Camera could not be opened" &&
                 Label(window, "HelpText") == "Wake the camera, close other camera apps, then scan again.",
                 "The dashboard shows opening failure and retry guidance");
+            CheckCameraIcon(window, "ScaleHigh", "A failed open uses red");
             CheckClearedScanDashboard(window);
 
             await ClickScanAsync(window);
@@ -271,6 +275,7 @@ internal static partial class Program
             var picker = (ComboBox)window.FindName("DevicePicker");
             Check(Label(window, "ConnectionText") == "Camera disconnected",
                 "The dashboard reports a disconnect during the shutter transfer before rescanning");
+            CheckCameraIcon(window, "ScaleHigh", "A disconnect during a read uses red");
             Check(picker.Items.Count == 0 && picker.SelectedItem is null && picker.Visibility == Visibility.Collapsed,
                 "The unplugged camera disappears from the picker immediately");
             CheckClearedScanDashboard(window);
@@ -299,6 +304,7 @@ internal static partial class Program
                 "If the camera still isn’t found, select “Open original photo”. " +
                 "Choose an original Nikon NEF or JPEG, Fujifilm RAF, Sony ARW or JPEG, or Pentax PEF or DNG.",
             "An empty discovery clears the device picker and shows connection guidance");
+        CheckCameraIcon(window, "Secondary", "An empty scan returns the camera icon to neutral");
         CheckClearedScanDashboard(window);
     }
 

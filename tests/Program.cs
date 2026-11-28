@@ -94,6 +94,7 @@ internal static partial class Program
                 $"Both windows switch to {theme} immediately");
             Check(zone.Foreground == app.FindResource("Yellow") && error.Foreground == app.FindResource("Red") && dot.Fill == app.FindResource("Green"),
                 $"The current camera reading and status adopt the {theme} palette");
+            CheckCameraIcon(window, "ScaleElevated", $"The camera error uses the shutter scale's {theme} yellow");
             Check(scan.Background == manualCount.SelectionBrush && scan.Foreground == manualCount.SelectionTextBrush &&
                 ((SolidColorBrush)scan.Background).Color == (Color)ColorConverter.ConvertFromString(primary) &&
                 ((SolidColorBrush)openPhoto.Background).Color == (Color)ColorConverter.ConvertFromString(secondary),
@@ -173,6 +174,9 @@ internal static partial class Program
 
     private static CameraReading ExampleReading(uint count) =>
         new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
+
+    private static void CheckCameraIcon(MainWindow window, string brush, string message) =>
+        Check(((System.Windows.Shapes.Path)window.FindName("CameraStatusIcon")).Stroke == window.FindResource(brush), message);
 
     private static void CheckSettings(SettingsWindow dialog, LanguageOption option, IReadOnlyDictionary<string, string> catalog,
         FlowDirection direction, string? renderFolder)

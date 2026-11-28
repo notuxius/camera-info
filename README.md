@@ -1,10 +1,10 @@
 # Camera Inspector
 
-A Windows utility for reading Canon cameras over USB and comparing mechanical shutter usage with Canon’s published durability ratings.
+A utility for reading Canon cameras over USB and comparing mechanical shutter usage with Canon’s published durability ratings.
 
 ## Download
 
-Download the Windows x64 executable from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). The EXE requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
+Download the executable from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). Running it requires Windows x64 and the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
 
 ## Example dashboard
 

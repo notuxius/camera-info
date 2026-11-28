@@ -4,3 +4,4 @@ pub mod canon;
 pub mod photo;
 pub mod ptp;
 pub mod wifi;
+pub mod usb;

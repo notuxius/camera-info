@@ -26,6 +26,9 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         run: rustup update stable
+      - name: Check ImageCaptureCore bridge
+        if: runner.os == 'macOS'
+        run: xcrun clang -fobjc-arc -fsyntax-only src/mac_camera.m
       - name: Run headless camera checks
         run: cargo +stable test --no-default-features --lib
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

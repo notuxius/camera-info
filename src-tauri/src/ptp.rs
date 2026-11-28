@@ -82,10 +82,10 @@ impl DeviceInfo {
         text(&mut data)?;
         take(&mut data, 2)?;
         let operations = codes(&mut data)?.collect();
-        codes(&mut data)?;
+        let _ = codes(&mut data)?;
         let properties = codes(&mut data)?.collect();
-        codes(&mut data)?;
-        codes(&mut data)?;
+        let _ = codes(&mut data)?;
+        let _ = codes(&mut data)?;
         let maker = text(&mut data)?.unwrap_or_else(|| "—".into());
         let mut model = text(&mut data)?.unwrap_or_else(|| "Unknown camera".into());
         if maker.to_ascii_uppercase().starts_with("CANON") && model.to_ascii_uppercase().starts_with("EOS ") {

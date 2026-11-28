@@ -38,7 +38,7 @@ struct Tiff<'a> {
 impl<'a> Tiff<'a> {
     fn new(file: &'a mut File, start: u64, end: u64) -> io::Result<Self> {
         let mut metadata = Self { file, start, end, little: true, first: 0 };
-        let header = metadata.bytes::<8>(0)?;
+        let header = metadata.bytes::<8>(0u64)?;
         metadata.little = match &header[..2] {
             b"II" => true,
             b"MM" => false,

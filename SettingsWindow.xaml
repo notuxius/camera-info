@@ -33,24 +33,33 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Label x:Name="ThemeLabel" Grid.Row="1" Content="{DynamicResource ThemeLabel}" Target="{Binding ElementName=ThemePicker}"
+                <Label x:Name="ThemeLabel" Grid.Row="1" Content="{DynamicResource ThemeLabel}" Target="{Binding ElementName=SystemThemeButton}"
                        Foreground="{DynamicResource Secondary}" Margin="0,10,0,0" Padding="0,0,12,0" VerticalAlignment="Center" />
-                <ComboBox x:Name="ThemePicker" Grid.Row="1" Grid.Column="1" Style="{StaticResource Dropdown}" Margin="0,10,0,0"
-                          AutomationProperties.LabeledBy="{Binding ElementName=ThemeLabel}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock x:Name="ChoiceName" Text="{DynamicResource SystemOption}" />
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding}" Value="{x:Static local:AppTheme.Light}">
-                                    <Setter TargetName="ChoiceName" Property="Text" Value="{DynamicResource ThemeLight}" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding}" Value="{x:Static local:AppTheme.Dark}">
-                                    <Setter TargetName="ChoiceName" Property="Text" Value="{DynamicResource ThemeDark}" />
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <Grid x:Name="ThemeButtons" Grid.Row="1" Grid.Column="1" Margin="0,10,0,0">
+                    <Grid.Resources>
+                        <Style TargetType="RadioButton" BasedOn="{StaticResource ButtonChrome}">
+                            <Setter Property="Template" Value="{StaticResource ButtonFace}" />
+                            <Setter Property="Padding" Value="4,8" />
+                            <Style.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PrimaryFill}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryEdge}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Resources>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <RadioButton x:Name="SystemThemeButton" Content="{DynamicResource SystemOption}" Tag="{x:Static local:AppTheme.System}" />
+                    <RadioButton x:Name="LightThemeButton" Grid.Column="2" Content="{DynamicResource ThemeLight}" Tag="{x:Static local:AppTheme.Light}" />
+                    <RadioButton x:Name="DarkThemeButton" Grid.Column="4" Content="{DynamicResource ThemeDark}" Tag="{x:Static local:AppTheme.Dark}" />
+                </Grid>
             </Grid>
             <Border BorderBrush="{DynamicResource Edge}" BorderThickness="0,1,0,0" Margin="0,20,0,16" />
             <TextBlock x:Name="AboutHeading" Text="{DynamicResource About}" Foreground="{DynamicResource Secondary}" Margin="0,0,0,4" />

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Navigation;
 
@@ -25,13 +26,12 @@ internal partial class SettingsWindow : Window
                 ApplyLanguage(option, changeLanguage(option));
         };
         var app = (App)Application.Current;
-        ThemePicker.ItemsSource = Enum.GetValues<AppTheme>();
-        ThemePicker.SelectedItem = app.PreferredTheme;
-        ThemePicker.SelectionChanged += (_, _) =>
+        foreach (RadioButton button in ThemeButtons.Children)
         {
-            if (ThemePicker.SelectedItem is AppTheme theme)
-                app.ChangeTheme(theme);
-        };
+            var theme = (AppTheme)button.Tag;
+            button.IsChecked = theme == app.PreferredTheme;
+            button.Checked += (_, _) => app.ChangeTheme(theme);
+        }
     }
 
     private void ApplyLanguage(LanguageOption language, IReadOnlyDictionary<string, string> messages)

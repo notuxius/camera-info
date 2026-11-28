@@ -221,9 +221,9 @@
                         </StackPanel>
                         <StackPanel x:Name="ManualPanel" Orientation="Horizontal" Margin="0,11,0,0" Visibility="Collapsed">
                             <TextBox x:Name="ManualCount" Width="158" VerticalContentAlignment="Center" Padding="7,3" MaxLength="10"
-                                     Background="{DynamicResource Card}" Foreground="{DynamicResource Text}"
-                                     BorderBrush="{DynamicResource ControlEdge}" BorderThickness="1" CaretBrush="{DynamicResource Accent}"
-                                     SelectionBrush="{StaticResource PrimaryFill}" SelectionTextBrush="{StaticResource PrimaryText}" SelectionOpacity="1"
+                                     Background="{DynamicResource InputFill}" Foreground="{DynamicResource Text}"
+                                     BorderBrush="{DynamicResource ControlEdge}" BorderThickness="1" CaretBrush="{DynamicResource ControlAccent}"
+                                     SelectionBrush="{DynamicResource PrimaryFill}" SelectionTextBrush="{DynamicResource PrimaryText}" SelectionOpacity="1"
                                      FlowDirection="LeftToRight" AutomationProperties.Name="{DynamicResource VerifiedCount}">
                                 <TextBox.Template>
                                     <ControlTemplate TargetType="TextBox">
@@ -234,7 +234,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                                <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                                                <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource ControlAccent}" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>

@@ -60,33 +60,54 @@ internal static partial class Program
         app.LoadThemePreference(themePath);
         var window = new MainWindow(languagePath);
         var dialog = window.CreateSettingsWindow();
-        var picker = (ComboBox)dialog.FindName("ThemePicker");
+        var buttons = ((Grid)dialog.FindName("ThemeButtons")).Children.Cast<RadioButton>().ToArray();
+        var systemButton = (RadioButton)dialog.FindName("SystemThemeButton");
         var systemBackground = ((SolidColorBrush)window.Background).Color;
-        Check((AppTheme)picker.SelectedItem == AppTheme.System && !File.Exists(themePath), "Theme defaults to System");
+        Check(buttons.Single(button => button.IsChecked == true) == systemButton && !File.Exists(themePath), "Theme defaults to System");
 
-        window.ShowUsbReading(ExampleReading(87_000) with { DeviceErrorCode = 2 }, null);
+        window.ShowUsbReading(ExampleReading(87_000) with
+        {
+            Count = new(87_000, CountKind.Mechanical, IsUpperBound: true), DeviceErrorCode = 2
+        }, null);
         var zone = (TextBlock)window.FindName("ZoneText");
         var error = (TextBlock)window.FindName("CameraErrorText");
         var dot = (System.Windows.Shapes.Ellipse)window.FindName("ConnectionDot");
         var scan = (Button)window.FindName("ScanButton");
+        var openPhoto = (Button)window.FindName("OpenPhotoButton");
         var manualCount = (TextBox)window.FindName("ManualCount");
         var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
         var devicePicker = (ComboBox)window.FindName("DevicePicker");
-        foreach (var (theme, background) in new[] { (AppTheme.Light, "#F2F7FB"), (AppTheme.Dark, "#0E2234") })
+        var languagePicker = (ComboBox)dialog.FindName("LanguagePicker");
+        foreach (var (theme, background, primary, input, secondary, focus) in new[]
         {
-            picker.SelectedItem = theme;
+            (AppTheme.Light, "#F2F7FB", "#2399B6", "#FCFEFF", "#FCFEFF", "#205575"),
+            (AppTheme.Dark, "#111416", "#BBE2EF", "#14181A", "#252B2E", "#2399B6")
+        })
+        {
+            var selected = buttons.Single(button => (AppTheme)button.Tag == theme);
+            selected.IsChecked = true;
+            Check(buttons.Single(button => button.IsChecked == true) == selected && selected.Background == scan.Background &&
+                selected.Foreground == scan.Foreground && selected.BorderBrush == scan.BorderBrush &&
+                buttons.Where(button => button != selected).All(button => button.Background == openPhoto.Background),
+                $"Only the {theme} button is selected and highlighted");
             Check(window.Background == dialog.Background && ((SolidColorBrush)window.Background).Color == (Color)ColorConverter.ConvertFromString(background),
                 $"Both windows switch to {theme} immediately");
             Check(zone.Foreground == app.FindResource("Yellow") && error.Foreground == app.FindResource("Red") && dot.Fill == app.FindResource("Green"),
                 $"The current camera reading and status adopt the {theme} palette");
-            Check(scan.Background == manualCount.SelectionBrush && ((SolidColorBrush)scan.Background).Color == Color.FromRgb(0x23, 0x99, 0xB6) &&
-                scan.BorderBrush == picker.BorderBrush && picker.BorderBrush == devicePicker.BorderBrush && devicePicker.BorderBrush == manualCount.BorderBrush &&
-                supportedCameras.Foreground == manualCount.CaretBrush && manualCount.CaretBrush == app.FindResource("Accent"),
-                $"Buttons, inputs, and links adopt the {theme} palette");
+            Check(scan.Background == manualCount.SelectionBrush && scan.Foreground == manualCount.SelectionTextBrush &&
+                ((SolidColorBrush)scan.Background).Color == (Color)ColorConverter.ConvertFromString(primary) &&
+                ((SolidColorBrush)openPhoto.Background).Color == (Color)ColorConverter.ConvertFromString(secondary),
+                $"Primary and secondary controls adopt the {theme} palette");
+            Check(languagePicker.Background == devicePicker.Background && devicePicker.Background == manualCount.Background &&
+                ((SolidColorBrush)manualCount.Background).Color == (Color)ColorConverter.ConvertFromString(input) &&
+                openPhoto.BorderBrush == devicePicker.BorderBrush && devicePicker.BorderBrush == manualCount.BorderBrush &&
+                ((SolidColorBrush)manualCount.CaretBrush).Color == (Color)ColorConverter.ConvertFromString(focus) &&
+                supportedCameras.Foreground == app.FindResource("Accent"),
+                $"Fields, dropdowns, and links adopt the {theme} palette");
             Check(File.ReadAllText(themePath) == theme.ToString(), $"The {theme} preference is saved");
             if (renderFolder is not null)
             {
-                Render((Grid)window.FindName("Dashboard"), renderFolder, $"theme-{theme}-dashboard");
+                Render((Grid)window.FindName("Dashboard"), renderFolder, $"theme-{theme}-dashboard", height: 760);
                 var content = (Grid)dialog.Content;
                 content.Measure(new Size(content.Width, double.PositiveInfinity));
                 Render(content, renderFolder, $"theme-{theme}-settings", content.Width, Math.Ceiling(content.DesiredSize.Height));
@@ -95,9 +116,9 @@ internal static partial class Program
 
         app.LoadThemePreference(themePath);
         var restored = window.CreateSettingsWindow();
-        Check((AppTheme)((ComboBox)restored.FindName("ThemePicker")).SelectedItem == AppTheme.Dark, "The saved theme is restored");
+        Check(((RadioButton)restored.FindName("DarkThemeButton")).IsChecked == true, "The saved theme is restored");
         restored.Close();
-        picker.SelectedItem = AppTheme.System;
+        systemButton.IsChecked = true;
         Check(((SolidColorBrush)window.Background).Color == systemBackground && File.ReadAllText(themePath) == "System",
             "Selecting System restores and saves the Windows app theme");
         File.WriteAllText(themePath, "unknown");
@@ -158,15 +179,18 @@ internal static partial class Program
     {
         var languageLabel = (Label)dialog.FindName("LanguageLabel");
         var themeLabel = (Label)dialog.FindName("ThemeLabel");
-        var themePicker = (ComboBox)dialog.FindName("ThemePicker");
+        var lightTheme = (RadioButton)dialog.FindName("LightThemeButton");
+        var darkTheme = (RadioButton)dialog.FindName("DarkThemeButton");
+        var systemTheme = (RadioButton)dialog.FindName("SystemThemeButton");
         var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
         var checkForUpdates = (Hyperlink)dialog.FindName("CheckForUpdatesLink");
         var close = (Button)dialog.FindName("CloseButton");
         string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
         Check(dialog.Title == catalog["Settings"] && dialog.FlowDirection == direction &&
             (string)languageLabel.Content == catalog["LanguageLabel"], $"Settings updates to {option.Code} while open");
-        Check((string)themeLabel.Content == catalog["ThemeLabel"] && SelectedDropdownText(themePicker) == catalog["SystemOption"],
-            $"The theme label and current choice update to {option.Code}");
+        Check((string)themeLabel.Content == catalog["ThemeLabel"] && (string)lightTheme.Content == catalog["ThemeLight"] &&
+            (string)darkTheme.Content == catalog["ThemeDark"] && (string)systemTheme.Content == catalog["SystemOption"],
+            $"The theme label and all three buttons update to {option.Code}");
         Check(Label(dialog, "AboutHeading") == catalog["About"] &&
             Label(dialog, "AboutDescription") == catalog["CameraDiagnostics"] &&
             Label(dialog, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
@@ -248,6 +272,12 @@ internal static partial class Program
         Check((LanguageOption)picker.SelectedItem == Languages.System, "The picker defaults to System");
         Check(string.Join(" ", picker.Items.Cast<LanguageOption>().Select(option => option.Code)) ==
             "system ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "The picker lists System and all 16 translations");
+
+        var pickerSize = new Size(240, 38);
+        picker.Measure(pickerSize);
+        picker.Arrange(new Rect(pickerSize));
+        var toggle = (FrameworkElement)picker.Template.FindName("Toggle", picker);
+        Check(toggle.RenderSize == picker.RenderSize, "The language dropdown has a click target across its whole face");
 
         foreach (LanguageOption option in Languages.Options)
         {

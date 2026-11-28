@@ -54,26 +54,5 @@ internal static class Languages
         return Options.FirstOrDefault(option => option.Code == code) ?? Options.Single(option => option.Code == "en");
     }
 
-    internal static void SavePreference(string path, LanguageOption option)
-    {
-        string directory = Path.GetDirectoryName(path)!;
-        string temporary = Path.Combine(directory, Path.GetRandomFileName());
-        try
-        {
-            Directory.CreateDirectory(directory);
-            try
-            {
-                File.WriteAllText(temporary, option.Code);
-                File.Move(temporary, path, overwrite: true);
-            }
-            finally
-            {
-                File.Delete(temporary);
-            }
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            Debug.WriteLine(error);
-        }
-    }
+    internal static void SavePreference(string path, LanguageOption option) => PreferenceFile.Write(path, option.Code);
 }

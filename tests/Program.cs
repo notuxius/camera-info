@@ -81,18 +81,20 @@ internal static partial class Program
     private static CameraReading ExampleReading(uint count) =>
         new("Canon EOS 5D Mark III", "Canon", "EXAMPLE", "1.3.6", 72, new(count, CountKind.Mechanical));
 
-    private static void CheckAbout(LanguageOption option, IReadOnlyDictionary<string, string> catalog,
+    private static void CheckSettings(SettingsWindow dialog, LanguageOption option, IReadOnlyDictionary<string, string> catalog,
         FlowDirection direction, string? renderFolder)
     {
-        var dialog = new AboutWindow(option, catalog);
+        var languageLabel = (Label)dialog.FindName("LanguageLabel");
         var supportedCameras = (Hyperlink)dialog.FindName("SupportedCamerasLink");
         var checkForUpdates = (Hyperlink)dialog.FindName("CheckForUpdatesLink");
         var close = (Button)dialog.FindName("CloseButton");
         string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
-        Check(dialog.Title == catalog["About"] && dialog.FlowDirection == direction &&
+        Check(dialog.Title == catalog["Settings"] && dialog.FlowDirection == direction &&
+            (string)languageLabel.Content == catalog["LanguageLabel"], $"Settings updates to {option.Code} while open");
+        Check(Label(dialog, "AboutHeading") == catalog["About"] &&
             Label(dialog, "VersionText") == string.Format(option.Culture, catalog["Version"], version),
             $"About shows the app version and uses the selected language ({option.Code})");
-        Check(close.IsCancel && (string)close.Content == catalog["Close"], $"About has a localized Close button ({option.Code})");
+        Check(close.IsCancel && (string)close.Content == catalog["Close"], $"Settings has a localized Close button ({option.Code})");
         Check(supportedCameras.NavigateUri.AbsoluteUri == "https://github.com/notuxius/camera-inspector#brand-support-backlog" &&
             ((Run)supportedCameras.Inlines.FirstInline).Text == catalog["SupportedCameras"],
             $"About links to supported cameras ({option.Code})");
@@ -100,16 +102,22 @@ internal static partial class Program
             ((Run)checkForUpdates.Inlines.FirstInline).Text == catalog["CheckForUpdates"],
             $"About links to the latest GitHub release ({option.Code})");
         if (renderFolder is not null && option.Code is "en" or "ar")
-            Render((Grid)dialog.Content, renderFolder, $"about-{option.Code}", 344, 224);
-        dialog.Close();
+        {
+            var content = (Grid)dialog.Content;
+            content.Measure(new Size(content.Width, double.PositiveInfinity));
+            Render(content, renderFolder, $"settings-{option.Code}", content.Width, Math.Ceiling(content.DesiredSize.Height));
+        }
     }
 
     private static void CheckLanguages(MainWindow window, string preferencePath, string? renderFolder)
     {
-        var picker = (ComboBox)window.FindName("LanguagePicker");
+        var dialog = window.CreateSettingsWindow();
+        var picker = (ComboBox)dialog.FindName("LanguagePicker");
         var english = (LanguageOption)picker.SelectedItem;
         var original = Languages.Catalog(english);
-        var aboutButton = (Button)window.FindName("AboutButton");
+        var settingsButton = (Button)window.FindName("SettingsButton");
+        Check(window.FindName("LanguagePicker") is null && window.FindName("AboutButton") is null,
+            "Settings replaces the dashboard language picker and About button");
         Check(english.Code == "en", "No saved language defaults to English");
         Check(string.Join(" ", picker.Items.Cast<LanguageOption>().Select(option => option.Code)) ==
             "ar bn zh arz en fr de hi id ja pcm pt ru es uk ur", "Picker matches Relf's 16 languages");
@@ -131,8 +139,8 @@ internal static partial class Program
             Check(window.FlowDirection == direction, $"{option.Code} has the expected layout direction");
             Check((string)((Button)window.FindName("ScanButton")).Content == catalog["Scan"], "Static labels update on selection");
             Check((string)((Button)window.FindName("OpenPhotoButton")).Content == catalog["OpenPhoto"], "The photo button updates on language selection");
-            Check((string)aboutButton.Content == catalog["About"], $"The About button updates to {option.Code}");
-            CheckAbout(option, catalog, direction, renderFolder);
+            Check((string)settingsButton.Content == catalog["Settings"], $"The Settings button updates to {option.Code}");
+            CheckSettings(dialog, option, catalog, direction, renderFolder);
             Check(Label(window, "ConnectionText") == catalog["UsbConnected"] &&
                 Label(window, "ZoneText") == catalog["ElevatedUsage"], "Switching language preserves and retranslates the USB reading");
             Check(Label(window, "CountText") == 87_000.ToString("N0", option.Culture), "Shutter count uses the selected language's number format");
@@ -141,8 +149,10 @@ internal static partial class Program
         }
 
         var restored = new MainWindow(preferencePath);
-        Check(((LanguageOption)((ComboBox)restored.FindName("LanguagePicker")).SelectedItem).Code == "ur" &&
+        var restoredDialog = restored.CreateSettingsWindow();
+        Check(((LanguageOption)((ComboBox)restoredDialog.FindName("LanguagePicker")).SelectedItem).Code == "ur" &&
             restored.FlowDirection == FlowDirection.RightToLeft, "A new window restores the saved language");
+        restoredDialog.Close();
         restored.Close();
 
         var reading = new CameraReading("Canon EOS R7", "Canon", "12345", "1.3.6", 72,
@@ -169,6 +179,7 @@ internal static partial class Program
 
         File.WriteAllText(preferencePath, "unknown");
         Check(Languages.ReadPreference(preferencePath) == english, "An unknown saved language falls back to English");
+        dialog.Close();
     }
 
     private static void CheckCanonUsb(CameraRating rating)

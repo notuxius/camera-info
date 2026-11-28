@@ -169,7 +169,8 @@ internal static partial class Program
             Check(manager.Scans == 1, "The scan runs discovery");
             CheckNoCameraFound(window);
 
-            var picker = (ComboBox)window.FindName("LanguagePicker");
+            var dialog = window.CreateSettingsWindow();
+            var picker = (ComboBox)dialog.FindName("LanguagePicker");
             var original = picker.SelectedItem;
             foreach (LanguageOption option in picker.Items)
             {
@@ -178,6 +179,7 @@ internal static partial class Program
                     $"An empty scan uses the generic message in {option.Code}");
             }
             picker.SelectedItem = original;
+            dialog.Close();
         });
         Console.WriteLine("End-to-end scan with no camera found passed.");
     }

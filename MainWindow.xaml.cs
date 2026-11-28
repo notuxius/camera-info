@@ -40,17 +40,14 @@ public partial class MainWindow : Window
         _readCamera = readCamera;
         InitializeComponent();
         SetLanguage(Languages.ReadPreference(languagePath));
-        LanguagePicker.ItemsSource = Languages.Options;
-        LanguagePicker.SelectedItem = _language;
+        WindowPlacement.Attach(this, Path.Combine(Path.GetDirectoryName(languagePath)!, "window.json"));
     }
 
-    private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)
+    private IReadOnlyDictionary<string, string> ChangeLanguage(LanguageOption option)
     {
-        if (LanguagePicker.SelectedItem is not LanguageOption option || option == _language)
-            return;
-
         SetLanguage(option);
         Languages.SavePreference(_languagePath, option);
+        return _messages;
     }
 
     private void SetLanguage(LanguageOption option)
@@ -71,10 +68,25 @@ public partial class MainWindow : Window
     private string T(string key, params object?[] values) =>
         values.Length == 0 ? _messages[key] : string.Format(_language.Culture, _messages[key], values);
 
-    private async void OnLoaded(object sender, RoutedEventArgs e) => await ScanAsync();
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        await ScanAsync();
+        if (SizeToContent == SizeToContent.Height && IsVisible)
+        {
+            UpdateLayout();
+            Height = RestoreBounds.Height;
+            SizeToContent = SizeToContent.Manual;
+        }
+    }
 
-    private void OnAbout(object sender, RoutedEventArgs e) =>
-        new AboutWindow(_language, _messages) { Owner = this }.ShowDialog();
+    internal SettingsWindow CreateSettingsWindow() => new(_language, _messages, ChangeLanguage);
+
+    private void OnSettings(object sender, RoutedEventArgs e)
+    {
+        var dialog = CreateSettingsWindow();
+        dialog.Owner = this;
+        dialog.ShowDialog();
+    }
 
     private async void OnScan(object sender, RoutedEventArgs e) => await ScanAsync();
 

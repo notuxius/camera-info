@@ -20,9 +20,9 @@ Select **Open original photo** and choose a recent, unedited Nikon NEF or JPEG, 
 
 On the Fujifilm X-E5, select **USB CARD READER** under **Network/USB Setting** → **Connection Mode**. [Fujifilm X-E5 manual](https://app.fujifilm-dsc.com/en/manual/x-e5/connections/network_usb_menu/)
 
-Use the **Language** menu at the top of the window to switch the interface. Camera Inspector remembers your selection the next time you open it.
+Select **Settings** to change the interface language. Camera Inspector remembers your selection the next time you open it. The **About** section in Settings shows the installed version and links to supported cameras and the latest release.
 
-Select **About** to see the installed version and open the supported camera list.
+Camera Inspector restores the dashboard window's size and position when you reopen it.
 
 Camera Inspector displays the model, firmware, serial number, battery charge, and shutter count when the source supplies them. USB discovery works through Windows Portable Devices. The app displays uncertain counters as reported and leaves the usage status gray. When the reading supplies a range or an uncertain counter, you can enter an exact mechanical count from a service report if a manufacturer rating is available.
 

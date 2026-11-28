@@ -9,7 +9,7 @@ Download Camera Inspector from [GitHub Releases](https://github.com/notuxius/cam
 | Platform | Download |
 | --- | --- |
 | Windows x64 | Run the Windows installer. It installs Microsoft Edge WebView2 if needed. |
-| macOS 13 or later | Choose the disk image for Apple Silicon or Intel and drag **Camera Inspector** into Applications. |
+| macOS 13 or later on Apple Silicon | Open the disk image and drag **Camera Inspector** into Applications. |
 
 Release notes list the requirements for older downloads.
 
@@ -104,11 +104,11 @@ npm test
 cargo test --locked --manifest-path src-tauri/Cargo.toml --features custom-protocol
 ```
 
-Build the Windows installer with `npm run tauri -- build --bundles nsis -- --locked`. Build the macOS disk image on a Mac with `npm run tauri -- build --bundles dmg -- --locked`. The packages are written under `src-tauri/target/release/bundle`.
+Build the Windows installer with `npm run tauri -- build --bundles nsis -- --locked`. Build the macOS disk image on an Apple Silicon Mac with `npm run tauri -- build --bundles dmg -- --locked`. The packages are written under `src-tauri/target/release/bundle`.
 
 The Windows installer and macOS app bundles include the MIT license and third-party notices in their `licenses` resources. GitHub Actions generates the dependency notices from `Cargo.lock` and verifies the installed files against the build inputs.
 
-The GitHub Actions workflow builds and smoke-tests Windows x64, Apple Silicon, and Intel macOS packages. Branch builds use ad-hoc macOS signing for testing. A version tag matching the app version builds the Developer ID-signed, notarized packages using the repository secrets described in the [Tauri signing guide](https://v2.tauri.app/distribute/sign/macos/). Verify all three jobs on the published tag and attach the three packages to the same GitHub Release.
+The GitHub Actions workflow builds and smoke-tests the Windows x64 installer and Apple Silicon disk image. Branch builds use ad-hoc macOS signing for testing. A version tag matching the app version builds the Developer ID-signed, notarized disk image using the repository secrets described in the [Tauri signing guide](https://v2.tauri.app/distribute/sign/macos/). Attach both packages to the same GitHub Release and verify the license and platform jobs on the published tag.
 
 USB transport uses the Windows MTP extensions or ImageCaptureCore PTP commands. [Microsoft WPD MTP documentation](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/supporting-mtp-extensions) · [Apple camera API](https://developer.apple.com/documentation/imagecapturecore/iccameradevice) · [libgphoto2 property definitions](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 

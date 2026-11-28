@@ -48,10 +48,6 @@ jobs:
             platform: macos-arm64
             bundle: dmg
             extension: dmg
-          - runner: macos-15-intel
-            platform: macos-x64
-            bundle: dmg
-            extension: dmg
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -158,6 +154,8 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$volume" "${images[0]}"
           trap 'hdiutil detach "$volume"' EXIT
           app="$volume/Camera Inspector.app"
+          binary="$app/Contents/MacOS/camera-inspector"
+          test "$(lipo -archs "$binary")" = arm64
           codesign --verify --deep --strict "$app"
           notices="$app/Contents/Resources/licenses"
           cmp LICENSE "$notices/LICENSE.txt"
@@ -169,7 +167,7 @@ jobs:
             xcrun stapler validate "$app"
             spctl --assess --type execute "$app"
           fi
-          python3 -c 'import subprocess,sys; subprocess.run([sys.argv[1], "--smoke-test"], timeout=30, check=True)' "$app/Contents/MacOS/camera-inspector"
+          python3 -c 'import subprocess,sys; subprocess.run([sys.argv[1], "--smoke-test"], timeout=30, check=True)' "$binary"
           cp "${images[0]}" "$PACKAGE_FILE"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

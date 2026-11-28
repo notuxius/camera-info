@@ -253,7 +253,7 @@ fn center_startup_window(window: &WebviewWindow) -> tauri::Result<Option<Physica
 #[tauri::command]
 fn ui_ready(app: AppHandle, window: WebviewWindow, state: State<'_, Inspector>) -> Result<(), String> {
     // The dashboard can change the window size before it is shown.
-    let center = if state.center_on_startup && !window.is_maximized().map_err(error)? {
+    let center = if state.center_on_startup {
         center_startup_window(&window).map_err(error)?
     } else {
         None
@@ -337,7 +337,7 @@ fn restore_window(window: &WebviewWindow, path: &Path) -> bool {
     if maximize {
         let _ = window.maximize();
     }
-    position_restored
+    position_restored || maximize
 }
 
 fn main() {

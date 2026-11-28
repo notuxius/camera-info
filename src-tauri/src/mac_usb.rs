@@ -71,6 +71,7 @@ pub fn read(device: Device) -> io::Result<Reading> {
     let id = CString::new(device.id).map_err(|_| invalid("Invalid camera identifier."))?;
     let descriptor = unsafe { ci_mac_open(id.as_ptr()) };
     if descriptor.status < 0 { return Err(descriptor.error()); }
+    let mut link = Session { transaction: 0 };
     let camera: Camera = serde_json::from_slice(descriptor.data())?;
     let ids = Some((camera.vendor, camera.product));
     let canon_usb_model = canon::usb_model(ids);
@@ -86,7 +87,6 @@ pub fn read(device: Device) -> io::Result<Reading> {
         return Ok(reading);
     }
 
-    let mut link = Session { transaction: 0 };
     let mut advertised_battery = false;
     if let Some(info) = link.read(GET_DEVICE_INFO, &[])?.and_then(|data| DeviceInfo::parse(&data, Source::Usb).ok()) {
         reading.firmware = info.reading.firmware;
@@ -95,8 +95,12 @@ pub fn read(device: Device) -> io::Result<Reading> {
         if info.reading.model != "Unknown camera" { reading.model = info.reading.model; }
         advertised_battery = info.properties.contains(&0x5001);
     }
-    if let Some(model) = canon_usb_model.as_ref().or(nikon_usb.as_ref()) {
+    if let Some(model) = nikon_usb.as_ref() {
         reading.model.clone_from(model);
+    } else if let Some(model) = canon_usb_model.as_ref() {
+        if canon::model_key(model) != canon::model_key(&reading.model) {
+            reading.model.clone_from(model);
+        }
     } else if reading.maker.to_ascii_uppercase().starts_with("NIKON") {
         reading.model = nikon_model(&reading.model).unwrap_or(reading.model);
     }

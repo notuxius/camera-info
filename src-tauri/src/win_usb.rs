@@ -151,8 +151,12 @@ pub fn read(camera: Device) -> io::Result<Reading> {
         }
     }
     let canon_model = canon::usb_model(ids);
-    if let Some(model) = nikon.or_else(|| canon_model.clone()) {
+    if let Some(model) = nikon {
         reading.model = model;
+    } else if let Some(model) = canon_model.as_ref() {
+        if canon::model_key(model) != canon::model_key(&reading.model) {
+            reading.model.clone_from(model);
+        }
     } else if maker == "Nikon" {
         reading.model = nikon_model(&reading.model).unwrap_or(reading.model);
     }

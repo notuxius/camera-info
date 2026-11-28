@@ -29,6 +29,10 @@ pub trait Transport {
     fn control(&mut self, command: u16, args: &[u32]) -> io::Result<bool> {
         Ok(self.execute(command, args, Direction::None)?.code == OK)
     }
+
+    fn cleanup(&mut self, command: u16, args: &[u32]) {
+        let _ = self.control(command, args);
+    }
 }
 
 pub fn le16(bytes: &[u8]) -> u16 {

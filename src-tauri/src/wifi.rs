@@ -82,11 +82,7 @@ pub fn read(endpoint: SocketAddr, client_id: Uuid, cancel: &AtomicBool) -> io::R
         }
         Ok(reading)
     })();
-    if connection.usable {
-        connection.cancel = &NEVER_CANCELLED;
-        connection.operation_timeout = Duration::from_secs(1);
-        let _ = connection.control(0x1003, &[]);
-    }
+    connection.cleanup(0x1003, &[]);
     result
 }
 
@@ -202,6 +198,19 @@ impl Transport for Connection<'_> {
         let result = self.exchange(operation, args);
         self.usable = result.is_ok();
         result
+    }
+
+    fn cleanup(&mut self, operation: u16, args: &[u32]) {
+        if !self.usable {
+            return;
+        }
+        let cancel = self.cancel;
+        let timeout = self.operation_timeout;
+        self.cancel = &NEVER_CANCELLED;
+        self.operation_timeout = Duration::from_secs(1);
+        let _ = self.control(operation, args);
+        self.cancel = cancel;
+        self.operation_timeout = timeout;
     }
 }
 
@@ -335,35 +344,60 @@ mod tests {
             write(&mut event, 13, &[]);
             assert_eq!(read(&mut event), (14, vec![]));
 
-            let mut info = vec![0; 8 + 1 + 2 + 5 * 4];
+            let mut info = vec![0; 8 + 1 + 2];
+            let operations = [0x1001u16, 0x1002, 0x1003, 0x1015, 0x9108, 0x9114, 0x9115, 0x9116, 0x9127];
+            info.extend((operations.len() as u32).to_le_bytes());
+            info.extend(operations.into_iter().flat_map(u16::to_le_bytes));
+            info.extend([0; 4 * 4]);
             for value in ["Canon.Inc", "EOS R8", "1.6.0", "WIFI123"] {
                 info.push((value.len() + 1) as u8);
                 info.extend(value.encode_utf16().chain([0]).flat_map(u16::to_le_bytes));
             }
 
-            for (operation, transaction, data) in [
-                (0x1001, 0u32, Some(info.as_slice())), (0x1002, 0, None),
-                (0x1001, 1, Some(info.as_slice())), (0x1003, 2, None),
+            let battery = [16u32, 0xC189, 0xD111, 4].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>();
+            let release = [
+                28u32, 0xC189, crate::canon::RELEASE_PROPERTY, 16, 1, 87_000, 100_000,
+                16, 0xC189, 0xD1C4, 0,
+            ].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>();
+            for (operation, transaction, argument, data, code) in [
+                (0x1001, 0u32, None, Some(info.as_slice()), OK),
+                (0x1002, 0, Some(0x41), None, OK),
+                (0x1001, 1, None, Some(info.as_slice()), OK),
+                (0x1015, 2, Some(crate::canon::LEGACY_PROPERTY), None, 0x200A),
+                (0x9114, 3, Some(1), None, OK),
+                (0x9115, 4, Some(1), None, OK),
+                (0x9108, 5, None, Some(&[][..]), OK),
+                (0x9116, 6, None, Some(battery.as_slice()), OK),
+                (0x9116, 7, None, Some(&[][..]), OK),
+                (0x9116, 8, None, Some(&[][..]), OK),
+                (0x9127, 9, Some(crate::canon::RELEASE_PROPERTY), None, OK),
+                (0x9116, 10, None, Some(release.as_slice()), OK),
+                (0x9115, 11, Some(0), None, OK),
+                (0x9114, 12, Some(0), None, OK),
+                (0x1003, 13, None, None, OK),
             ] {
                 let (kind, request) = read(&mut command);
                 assert_eq!(kind, 6);
                 assert_eq!(le16(&request[4..]), operation);
                 assert_eq!(le32(&request[6..]), transaction);
-                if operation == 0x1002 {
-                    assert_eq!(le32(&request[10..]), 0x41);
+                if let Some(argument) = argument {
+                    assert_eq!(le32(&request[10..]), argument);
                 }
                 if let Some(data) = data {
                     let mut start = Vec::from(transaction.to_le_bytes());
                     start.extend((data.len() as u64).to_le_bytes());
                     write(&mut command, 9, &start);
                     let mut segment = Vec::from(transaction.to_le_bytes());
-                    segment.extend(&data[..10]);
-                    write(&mut command, 10, &segment);
-                    segment.truncate(4);
-                    segment.extend(&data[10..]);
+                    let split = data.len().min(10);
+                    if split > 0 {
+                        segment.extend(&data[..split]);
+                        write(&mut command, 10, &segment);
+                        segment.truncate(4);
+                    }
+                    segment.extend(&data[split..]);
                     write(&mut command, 12, &segment);
                 }
-                let mut response = Vec::from(OK.to_le_bytes());
+                let mut response = Vec::from(code.to_le_bytes());
                 response.extend(transaction.to_le_bytes());
                 write(&mut command, 7, &response);
             }
@@ -373,5 +407,9 @@ mod tests {
         assert_eq!(reading.model, "Canon EOS R8");
         assert_eq!(reading.serial.as_deref(), Some("WIFI123"));
         assert_eq!(reading.source, Source::Wifi);
+        assert_eq!(reading.battery, Some(75));
+        assert_eq!(reading.device_error_code, Some(0));
+        assert_eq!(reading.count.unwrap().value, 87_000);
+        assert!(reading.count.unwrap().is_upper_bound);
     }
 }

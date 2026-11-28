@@ -64,12 +64,12 @@ jobs:
           grep -Fx "version = \"$version\"" src-tauri/Cargo.toml
       - name: Bundle Windows installer
         if: runner.os == 'Windows'
-        run: npm run tauri -- build --bundles nsis
+        run: npm run tauri -- build --bundles nsis -- --locked
       - name: Bundle macOS test disk image
         if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/v')
         env:
           APPLE_SIGNING_IDENTITY: '-'
-        run: npm run tauri -- build --bundles dmg
+        run: npm run tauri -- build --bundles dmg -- --locked
       - name: Sign and bundle macOS release disk image
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
         env:
@@ -87,7 +87,7 @@ jobs:
           : "${APPLE_ID:?Set the Apple ID secret}"
           : "${APPLE_PASSWORD:?Set the Apple app-specific password secret}"
           : "${APPLE_TEAM_ID:?Set the Apple Team ID secret}"
-          npm run tauri -- build --bundles dmg
+          npm run tauri -- build --bundles dmg -- --locked
       - name: Smoke-test Windows installer
         if: runner.os == 'Windows'
         env:
@@ -116,6 +116,8 @@ jobs:
           trap 'hdiutil detach "$volume"' EXIT
           app="$volume/Camera Inspector.app"
           codesign --verify --deep --strict "$app"
+          plutil -extract NSCameraUsageDescription raw "$app/Contents/Info.plist"
+          plutil -extract NSLocalNetworkUsageDescription raw "$app/Contents/Info.plist"
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
             xcrun stapler validate "$app"
             spctl --assess --type execute "$app"

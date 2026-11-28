@@ -229,11 +229,14 @@ pub fn read_eos(
         }
         Ok(())
     })();
-    if events {
-        let _ = transport.control(SET_EVENT_MODE, &[0]);
-    }
-    if remote {
-        let _ = transport.control(SET_REMOTE_MODE, &[0]);
+    let disconnected = result.as_ref().is_err_and(|error: &io::Error| error.kind() == io::ErrorKind::NotConnected);
+    if !disconnected {
+        if events {
+            transport.cleanup(SET_EVENT_MODE, &[0]);
+        }
+        if remote {
+            transport.cleanup(SET_REMOTE_MODE, &[0]);
+        }
     }
     report.apply(reading, wifi);
     result
@@ -277,8 +280,11 @@ fn read_monitor(transport: &mut impl Transport) -> io::Result<Option<ShutterCoun
         }
         Ok(transport.read(READ_MONITOR, &[0, 0, 1])?.as_deref().and_then(decode_monitor))
     })();
-    let close = session_payload(b"MonClose\0");
-    let _ = transport.execute(SEND_MONITOR, &[0, 0], Direction::Out(&close));
+    let disconnected = result.as_ref().is_err_and(|error: &io::Error| error.kind() == io::ErrorKind::NotConnected);
+    if !disconnected {
+        let close = session_payload(b"MonClose\0");
+        let _ = transport.execute(SEND_MONITOR, &[0, 0], Direction::Out(&close));
+    }
     result
 }
 

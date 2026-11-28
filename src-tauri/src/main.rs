@@ -48,6 +48,7 @@ struct Settings {
     theme: String,
     version: &'static str,
     platform: &'static str,
+    smoke: bool,
 }
 
 fn error(error: impl std::fmt::Display) -> String {
@@ -180,6 +181,7 @@ fn settings(state: State<'_, Inspector>) -> Settings {
         theme: if matches!(theme.as_str(), "Dark" | "Light") { theme } else { "System".into() },
         version: env!("CARGO_PKG_VERSION"),
         platform: if cfg!(target_os = "macos") { "macOS" } else { "Windows" },
+        smoke: state.smoke,
     }
 }
 

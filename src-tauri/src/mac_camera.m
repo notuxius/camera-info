@@ -41,14 +41,18 @@ typedef struct {
 @property (nonatomic, strong) CaptureRequest *opening;
 @property (nonatomic, strong) CaptureRequest *closing;
 @property (nonatomic, strong) CaptureRequest *command;
-@property (nonatomic) BOOL opened;
-@property (nonatomic) BOOL catalogReady;
 @end
 
 static NSString *deviceID(ICCameraDevice *camera) {
     return [NSString stringWithFormat:@"%04x:%04x:%08x:%@",
         (unsigned)camera.usbVendorID, (unsigned)camera.usbProductID, (unsigned)camera.usbLocationID,
         camera.UUIDString ?: @""];
+}
+
+static BOOL isUSBCamera(ICDevice *device) {
+    if (![device isKindOfClass:ICCameraDevice.class]) return NO;
+    return [device.transportType isEqualToString:ICTransportTypeUSB] ||
+        (device.usbVendorID > 0 && [device.transportType isEqualToString:ICTransportTypeMassStorage]);
 }
 
 static NSDictionary *deviceInfo(ICCameraDevice *camera) {
@@ -90,10 +94,6 @@ static NSData *encodeJSON(id value) {
     device.delegate = nil;
     self.active = nil;
 }
-- (void)finishOpeningIfReady {
-    if (!self.opened || !self.catalogReady || self.opening.finished) return;
-    [self.opening finish:0 data:encodeJSON(deviceInfo(self.active))];
-}
 - (void)device:(ICDevice *)device didOpenSessionWithError:(NSError *)error {
     if (device != self.active) return;
     if (error) {
@@ -102,24 +102,21 @@ static NSData *encodeJSON(id value) {
         self.active = nil;
         return;
     }
-    self.opened = YES;
     if (self.opening.finished) {
         [device requestCloseSession];
     } else {
-        [self finishOpeningIfReady];
+        [self.opening finish:0 data:encodeJSON(deviceInfo(self.active))];
     }
 }
 - (void)device:(ICDevice *)device didCloseSessionWithError:(NSError *)error {
     if (device != self.active) return;
     device.delegate = nil;
     self.active = nil;
+    self.command = nil;
+    self.opening = nil;
     [self.closing finish:0 data:nil];
 }
-- (void)deviceDidBecomeReadyWithCompleteContentCatalog:(ICCameraDevice *)device {
-    if (device != self.active) return;
-    self.catalogReady = YES;
-    [self finishOpeningIfReady];
-}
+- (void)deviceDidBecomeReadyWithCompleteContentCatalog:(ICCameraDevice *)device {}
 - (void)cameraDevice:(ICCameraDevice *)camera didAddItems:(NSArray<ICCameraItem *> *)items {}
 - (void)cameraDevice:(ICCameraDevice *)camera didRemoveItems:(NSArray<ICCameraItem *> *)items {}
 - (void)cameraDevice:(ICCameraDevice *)camera didRenameItems:(NSArray<ICCameraItem *> *)items {}
@@ -158,7 +155,7 @@ CameraResult ci_mac_scan(void) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1200 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
                 NSMutableArray *result = [NSMutableArray array];
                 for (ICDevice *device in state.browser.devices) {
-                    if ([device isKindOfClass:ICCameraDevice.class] && [device.transportType isEqualToString:ICTransportTypeUSB]) {
+                    if (isUSBCamera(device)) {
                         [result addObject:deviceInfo((ICCameraDevice *)device)];
                     }
                 }
@@ -180,17 +177,15 @@ CameraResult ci_mac_open(const char *identifier) {
                 return;
             }
             for (ICDevice *device in state.browser.devices) {
-                if (![device isKindOfClass:ICCameraDevice.class] || ![device.transportType isEqualToString:ICTransportTypeUSB]) continue;
+                if (!isUSBCamera(device)) continue;
                 ICCameraDevice *camera = (ICCameraDevice *)device;
                 if (![deviceID(camera) isEqualToString:idString]) continue;
-                if (![camera.capabilities containsObject:ICCameraDeviceCanAcceptPTPCommands]) {
+                if ([camera.transportType isEqualToString:ICTransportTypeMassStorage]) {
                     [request finish:0 data:encodeJSON(deviceInfo(camera))];
                     return;
                 }
                 state.active = camera;
                 state.opening = request;
-                state.opened = NO;
-                state.catalogReady = NO;
                 camera.delegate = state;
                 [camera requestOpenSession];
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 14 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{

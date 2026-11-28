@@ -21,7 +21,7 @@ Start live Nikon DSLR validation with the D750 and D850. For newer readers, star
 
 ## Implementation order
 
-1. Complete the Canon Windows hardware matrix. Record body, firmware, USB mode, operation result, and comparison count. Include bodies near a 1,000-shot boundary and diagnostic bodies above 65,535.
+1. Complete the Canon Windows and macOS hardware matrix. Verify a known shutter count over USB for each of the three Canon routes and confirm Wi-Fi discovery, pairing, and a second read after reconnecting. Record body, firmware, USB mode, operation result, and comparison count. Include bodies near a 1,000-shot boundary and diagnostic bodies above 65,535.
 2. Validate more original RAW files and add counter layouts where their meaning is known.
 3. Add USB reads by brand in priority order. Verify the count against a separate reading and observe which fields advance after controlled mechanical and electronic captures. Add model and firmware fixtures for both successful and unavailable results.
 4. Update the support table with hardware results as checks pass. Track device identity, direct USB counts, original-file counts, precision, and available manufacturer durability ratings for each model.

@@ -25,6 +25,7 @@ export function companions(reading) {
   if (!reading) return { mobile: null, desktop: [] };
   const manufacturer = reading.maker.trim().toUpperCase();
   let brand = manufacturer.split(" ")[0];
+  if (manufacturer.startsWith("CANON.")) brand = "CANON";
   let model = key(reading.model);
   if (brand === "RICOH" && model.startsWith("PENTAX")) brand = "PENTAX";
   if (brand === "OM" && (manufacturer === "OM SYSTEM" || manufacturer.startsWith("OM DIGITAL SOLUTIONS"))) brand = "OMSYSTEM";

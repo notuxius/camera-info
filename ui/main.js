@@ -25,7 +25,7 @@ let report = null;
 let manual = null;
 let devices = [];
 let activeDevice = "";
-let status = "NoCameraConnected";
+let status = "NoCameraDetected";
 let helpOverride = null;
 let busy = false;
 let wifiBusy = false;
@@ -79,7 +79,8 @@ function showStatus() {
   const state = success.has(status) ? "success" : failure.has(status) ? "error" : "muted";
   const activeError = report?.reading.deviceErrorCode > 0;
   body.setProperty("--state-color", "var(--" + state + ")");
-  body.setProperty("--camera-color", "var(--" + (activeError && state === "success" ? "warning" : state) + ")");
+  const camera = state === "success" ? (activeError ? "medium" : "low") : state === "error" ? "high" : "muted";
+  body.setProperty("--camera-color", "var(--" + camera + ")");
 }
 
 function setStatus(key) {
@@ -300,6 +301,7 @@ async function readDevice(id) {
 el("scan").addEventListener("click", async () => {
   if (busy) return;
   setBusy(true);
+  const previous = activeDevice;
   devices = [];
   activeDevice = "";
   renderPicker();
@@ -307,7 +309,7 @@ el("scan").addEventListener("click", async () => {
   try {
     devices = await invoke("scan_usb");
     if (!devices.length) setStatus("NoCameraDetected");
-    else await readDevice(devices[0].id);
+    else await readDevice((devices.find(device => device.id === previous) ?? devices[0]).id);
   } catch {
     helpOverride = [preferences.platform === "Windows" ? "ScanFailedHelp" : "OpenFailedHelp"];
     setStatus("ScanFailed");
@@ -330,10 +332,14 @@ el("photo").addEventListener("click", async () => {
   setStatus("OpeningPhoto");
   try {
     const next = await invoke("open_photo");
-    if (next) applyReport(next, "PhotoOpened");
+    if (next) {
+      activeDevice = "";
+      renderPicker();
+      applyReport(next, "PhotoOpened");
+    }
     else setStatus(oldStatus);
   } catch {
-    applyReport(null, "PhotoOpenFailed");
+    setStatus("PhotoOpenFailed");
     helpOverride = ["PhotoFormatsHelp"];
     render();
   } finally {
@@ -351,6 +357,7 @@ el("wifi").addEventListener("click", () => {
   setupSelect(el("addresses"), []);
   text("wifi-status", "");
   el("wifi-dialog").showModal();
+  el("discover").click();
 });
 
 el("close-wifi").addEventListener("click", () => el("wifi-dialog").close());
@@ -365,7 +372,7 @@ el("discover").addEventListener("click", async () => {
   try {
     const addresses = await invoke("scan_wifi");
     setupSelect(el("addresses"), addresses.map(address => [address, address]));
-    if (addresses.length) el("address").value = addresses[0];
+    if (addresses.length && !el("address").value.trim()) el("address").value = addresses[0];
     text("wifi-status", addresses.length ? "" : t("WifiNone"));
   } catch (error) {
     if (!error?.cancelled) text("wifi-status", t("WifiFailed"));
@@ -392,7 +399,11 @@ el("wifi-form").addEventListener("submit", async event => {
   try {
     const response = await invoke("read_wifi", { address });
     if (el("wifi-dialog").open) {
+      devices = [];
+      activeDevice = "";
+      renderPicker();
       applyReport(response, "WifiConnected");
+      setWifiBusy(false);
       el("wifi-dialog").close();
     }
   } catch (error) {
@@ -475,6 +486,7 @@ try {
   document.documentElement.dataset.theme = preferences.theme;
   await setLanguage();
   await invoke("ui_ready");
+  if (!preferences.smoke) el("scan").click();
 } catch (error) {
   document.body.textContent = String(error);
   console.error(error);

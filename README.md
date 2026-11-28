@@ -9,7 +9,7 @@ Download Camera Inspector from [GitHub Releases](https://github.com/notuxius/cam
 | Platform | Download |
 | --- | --- |
 | Windows x64 | Run the Windows installer. It installs Microsoft Edge WebView2 if needed. |
-| macOS 13 or later on Apple Silicon | Open the disk image and drag **Camera Inspector** into Applications. |
+| macOS 13 or later on Apple Silicon | Downloads are on hold pending Apple Developer ID signing. |
 
 Release notes list the requirements for older downloads.
 
@@ -108,7 +108,7 @@ Build the Windows installer with `npm run tauri -- build --bundles nsis -- --loc
 
 The Windows installer and macOS app bundles include the MIT license and third-party notices in their `licenses` resources. GitHub Actions generates the dependency notices from `Cargo.lock` and verifies the installed files against the build inputs.
 
-The GitHub Actions workflow builds and smoke-tests the Windows x64 installer and Apple Silicon disk image. Branch builds use ad-hoc macOS signing for testing. A version tag matching the app version builds the Developer ID-signed, notarized disk image using the repository secrets described in the [Tauri signing guide](https://v2.tauri.app/distribute/sign/macos/). Attach both packages to the same GitHub Release and verify the license and platform jobs on the published tag.
+GitHub Actions builds and smoke-tests both platforms and uploads the Windows installer. macOS disk images use ad-hoc signing for CI until Developer ID signing is ready. To resume macOS downloads, configure the signing secrets and set the `PUBLISH_MACOS` repository variable to `true`. A version tag matching the app version then produces a signed, notarized disk image for attachment to the GitHub Release. Verify the license and platform jobs on the published tag. [Tauri macOS signing guide](https://v2.tauri.app/distribute/sign/macos/)
 
 USB transport uses the Windows MTP extensions or ImageCaptureCore PTP commands. [Microsoft WPD MTP documentation](https://learn.microsoft.com/en-us/windows/win32/wpd_sdk/supporting-mtp-extensions) · [Apple camera API](https://developer.apple.com/documentation/imagecapturecore/iccameradevice) · [libgphoto2 property definitions](https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/ptp.h)
 

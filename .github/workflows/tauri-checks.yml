@@ -90,13 +90,9 @@ jobs:
       - name: Bundle Windows installer
         if: runner.os == 'Windows'
         run: npm run tauri -- build --bundles nsis -- --locked
-      - name: Bundle macOS test disk image
-        if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/v')
-        env:
-          APPLE_SIGNING_IDENTITY: '-'
-        run: npm run tauri -- build --bundles dmg -- --locked
       - name: Sign and bundle macOS release disk image
-        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        id: signed_macos
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v') && vars.PUBLISH_MACOS == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -113,6 +109,11 @@ jobs:
           : "${APPLE_PASSWORD:?Set the Apple app-specific password secret}"
           : "${APPLE_TEAM_ID:?Set the Apple Team ID secret}"
           npm run tauri -- build --bundles dmg -- --locked
+      - name: Bundle macOS test disk image
+        if: runner.os == 'macOS' && steps.signed_macos.outcome == 'skipped'
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: npm run tauri -- build --bundles dmg -- --locked
       - name: Smoke-test Windows installer
         if: runner.os == 'Windows'
         env:
@@ -146,6 +147,7 @@ jobs:
         if: runner.os == 'macOS'
         env:
           PACKAGE_FILE: CameraInspector-${{ matrix.platform }}.dmg
+          MACOS_SIGNING_OUTCOME: ${{ steps.signed_macos.outcome }}
         run: |
           shopt -s nullglob
           images=(src-tauri/target/release/bundle/dmg/*.dmg)
@@ -163,13 +165,14 @@ jobs:
           cmp src-tauri/generated-licenses/RUST-STD.html "$notices/RUST-STD.html"
           plutil -extract NSCameraUsageDescription raw "$app/Contents/Info.plist"
           plutil -extract NSLocalNetworkUsageDescription raw "$app/Contents/Info.plist"
-          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+          if [[ "$MACOS_SIGNING_OUTCOME" == success ]]; then
             xcrun stapler validate "$app"
             spctl --assess --type execute "$app"
           fi
           python3 -c 'import subprocess,sys; subprocess.run([sys.argv[1], "--smoke-test"], timeout=30, check=True)' "$binary"
           cp "${images[0]}" "$PACKAGE_FILE"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: runner.os == 'Windows' || steps.signed_macos.outcome == 'success'
         with:
           name: CameraInspector-${{ matrix.platform }}
           path: CameraInspector-${{ matrix.platform }}.${{ matrix.extension }}

@@ -4,7 +4,7 @@ A utility for reading camera details over USB or compatible Wi-Fi connections an
 
 ## Download
 
-Download the executable from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). Running it requires Windows x64 and the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
+Download the Windows x64 installer from the [latest release](https://github.com/notuxius/camera-inspector/releases/latest). It installs Microsoft Edge WebView2 if needed. The [v0.9.0 standalone build](https://github.com/notuxius/camera-inspector/releases/tag/v0.9.0) requires the [.NET 10 Desktop Runtime for Windows x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
 
 ## Example dashboard
 

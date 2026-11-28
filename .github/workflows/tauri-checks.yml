@@ -4,6 +4,7 @@ name: Camera Inspector Tauri checks
 on:
   push:
     branches: ['codex/tauri-migration', master]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -11,29 +12,118 @@ permissions:
   contents: read
 
 jobs:
-  core:
+  desktop:
     strategy:
       fail-fast: false
       matrix:
-        runner: [windows-2025, macos-15, macos-15-intel]
+        include:
+          - runner: windows-2025
+            platform: win-x64
+            bundle: nsis
+            extension: exe
+          - runner: macos-15
+            platform: macos-arm64
+            bundle: dmg
+            extension: dmg
+          - runner: macos-15-intel
+            platform: macos-x64
+            bundle: dmg
+            extension: dmg
     runs-on: ${{ matrix.runner }}
-    defaults:
-      run:
-        working-directory: src-tauri
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install Rust
-        run: rustup update stable
-      - name: Check ImageCaptureCore bridge
-        if: runner.os == 'macOS'
-        run: xcrun clang -fobjc-arc -fsyntax-only src/mac_camera.m
-      - name: Run headless camera checks
-        run: cargo +stable test --no-default-features --lib
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: matrix.runner == 'windows-2025'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          name: cargo-lock
-          path: src-tauri/Cargo.lock
+          node-version: '24'
+          cache: npm
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ matrix.platform }}-rust-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ matrix.platform }}-rust-
+      - name: Install build dependencies
+        run: |
+          rustup update stable
+          npm ci
+      - name: Run headless dashboard checks
+        run: npm test
+      - name: Run headless camera checks
+        working-directory: src-tauri
+        run: cargo +stable test --locked --release --features custom-protocol
+      - name: Verify tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          test "$GITHUB_REF_NAME" = "v$version"
+          grep -Fx "version = \"$version\"" src-tauri/Cargo.toml
+      - name: Bundle Windows installer
+        if: runner.os == 'Windows'
+        run: npm run tauri -- build --bundles nsis
+      - name: Bundle macOS test disk image
+        if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/v')
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: npm run tauri -- build --bundles dmg
+      - name: Sign and bundle macOS release disk image
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
+        run: |
+          : "${APPLE_CERTIFICATE:?Set the Apple Developer ID certificate secret}"
+          : "${APPLE_CERTIFICATE_PASSWORD:?Set the certificate password secret}"
+          : "${APPLE_SIGNING_IDENTITY:?Set the signing identity secret}"
+          : "${APPLE_ID:?Set the Apple ID secret}"
+          : "${APPLE_PASSWORD:?Set the Apple app-specific password secret}"
+          : "${APPLE_TEAM_ID:?Set the Apple Team ID secret}"
+          npm run tauri -- build --bundles dmg
+      - name: Smoke-test Windows installer
+        if: runner.os == 'Windows'
+        env:
+          PACKAGE_FILE: CameraInspector-${{ matrix.platform }}.exe
+        run: |
+          $packages = @(Get-ChildItem src-tauri/target/release/bundle/nsis -Filter '*.exe')
+          if ($packages.Count -ne 1) { throw 'Expected one installer.' }
+          $location = Join-Path $env:RUNNER_TEMP 'Camera Inspector smoke'
+          $installer = Start-Process -FilePath $packages[0].FullName -ArgumentList "/S /D=$location" -WindowStyle Hidden -PassThru
+          if (!$installer.WaitForExit(60000)) { $installer.Kill(); throw 'Installer timed out.' }
+          if ($installer.ExitCode -ne 0) { throw "Installer exited with $($installer.ExitCode)." }
+          $app = Start-Process -FilePath (Join-Path $location 'camera-inspector.exe') -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
+          if (!$app.WaitForExit(30000)) { $app.Kill(); throw 'Desktop app did not load.' }
+          if ($app.ExitCode -ne 0) { throw "Desktop app exited with $($app.ExitCode)." }
+          Copy-Item -LiteralPath $packages[0].FullName -Destination $env:PACKAGE_FILE
+      - name: Smoke-test macOS disk image
+        if: runner.os == 'macOS'
+        env:
+          PACKAGE_FILE: CameraInspector-${{ matrix.platform }}.dmg
+        run: |
+          shopt -s nullglob
+          images=(src-tauri/target/release/bundle/dmg/*.dmg)
+          test "${#images[@]}" -eq 1
+          volume="$RUNNER_TEMP/camera-inspector-volume"
+          hdiutil attach -nobrowse -readonly -mountpoint "$volume" "${images[0]}"
+          trap 'hdiutil detach "$volume"' EXIT
+          app="$volume/Camera Inspector.app"
+          codesign --verify --deep --strict "$app"
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            xcrun stapler validate "$app"
+            spctl --assess --type execute "$app"
+          fi
+          python3 -c 'import subprocess,sys; subprocess.run([sys.argv[1], "--smoke-test"], timeout=30, check=True)' "$app/Contents/MacOS/camera-inspector"
+          cp "${images[0]}" "$PACKAGE_FILE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: CameraInspector-${{ matrix.platform }}
+          path: CameraInspector-${{ matrix.platform }}.${{ matrix.extension }}
           if-no-files-found: error

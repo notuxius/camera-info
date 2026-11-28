@@ -1,0 +1,15 @@
+
+Windows package components
+
+The NSIS 3.13 installer and its standard plug-ins are distributed with the
+upstream notices in NSIS-COPYING.txt and NSISdl-LICENSE.txt. The source for NSIS
+and its LZMA compression component is available at
+https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/
+
+The nsis-tauri-utils plug-in, version 0.6.1, is distributed under the MIT license
+option in nsis-tauri-utils-LICENSE-MIT.txt. Its source is available at
+https://github.com/tauri-apps/nsis-tauri-utils/tree/nsis_tauri_utils-v0.6.1
+
+The statically linked Microsoft WebView2 SDK loader, version 1.0.3800.47, uses
+WebView2-LICENSE.txt and WebView2-NOTICE.txt from the matching SDK package.
+The Rust bindings use the license in webview2-rs-LICENSE.txt.

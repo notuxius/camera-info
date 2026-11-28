@@ -4,4 +4,5 @@ obj/
 dist/
 /src-tauri/target/
 /src-tauri/gen/
+/src-tauri/generated-licenses/
 node_modules/

@@ -3,6 +3,7 @@
 name = "camera-inspector"
 version = "0.10.0"
 edition = "2024"
+license = "MIT"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

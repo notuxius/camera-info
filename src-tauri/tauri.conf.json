@@ -28,6 +28,11 @@
     "active": true,
     "targets": ["nsis", "dmg"],
     "category": "Photography",
+    "resources": {
+      "../LICENSE": "licenses/LICENSE.txt",
+      "generated-licenses/THIRD-PARTY.txt": "licenses/THIRD-PARTY.txt",
+      "generated-licenses/RUST-STD.html": "licenses/RUST-STD.html"
+    },
     "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
     "macOS": {
       "minimumSystemVersion": "13.0",

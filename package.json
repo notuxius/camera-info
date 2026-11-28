@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/camera.test.js",
+    "licenses": "node scripts/prepare-licenses.js",
     "tauri": "tauri"
   },
   "devDependencies": {

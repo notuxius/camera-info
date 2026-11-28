@@ -98,11 +98,15 @@ Install the [Tauri build prerequisites](https://v2.tauri.app/start/prerequisites
 
 ```sh
 npm ci
+cargo install cargo-about --version 0.9.3 --locked
+npm run licenses
 npm test
 cargo test --locked --manifest-path src-tauri/Cargo.toml --features custom-protocol
 ```
 
 Build the Windows installer with `npm run tauri -- build --bundles nsis -- --locked`. Build the macOS disk image on a Mac with `npm run tauri -- build --bundles dmg -- --locked`. The packages are written under `src-tauri/target/release/bundle`.
+
+The Windows installer and macOS app bundles include the MIT license and third-party notices in their `licenses` resources. GitHub Actions generates the dependency notices from `Cargo.lock` and verifies the installed files against the build inputs.
 
 The GitHub Actions workflow builds and smoke-tests Windows x64, Apple Silicon, and Intel macOS packages. Branch builds use ad-hoc macOS signing for testing. A version tag matching the app version builds the Developer ID-signed, notarized packages using the repository secrets described in the [Tauri signing guide](https://v2.tauri.app/distribute/sign/macos/). Verify all three jobs on the published tag and attach the three packages to the same GitHub Release.
 

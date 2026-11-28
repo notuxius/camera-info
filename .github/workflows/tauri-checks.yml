@@ -12,7 +12,30 @@ permissions:
   contents: read
 
 jobs:
+  licenses:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Generate notices for the locked application dependencies
+        working-directory: src-tauri
+        run: |
+          version=0.9.3
+          archive="cargo-about-$version-x86_64-unknown-linux-musl"
+          curl -fsSL "https://github.com/EmbarkStudios/cargo-about/releases/download/$version/$archive.tar.gz" -o "$RUNNER_TEMP/$archive.tar.gz"
+          printf '%s  %s\n' 3ad1e94ea1e63d69d1961f4fb15ccbbe9575d906111f96d2cb4dce6df48f71b4 "$RUNNER_TEMP/$archive.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive.tar.gz" -C "$RUNNER_TEMP" "$archive/cargo-about"
+          export PATH="$RUNNER_TEMP/$archive:$PATH"
+          mkdir -p generated-licenses
+          cargo about generate --locked --fail --features custom-protocol --output-file generated-licenses/THIRD-PARTY.txt about.hbs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dependency-notices
+          path: src-tauri/generated-licenses/THIRD-PARTY.txt
+          if-no-files-found: error
   desktop:
+    needs: licenses
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +73,12 @@ jobs:
         run: |
           rustup update stable
           npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: dependency-notices
+          path: src-tauri/generated-licenses
+      - name: Copy the compiler's standard-library notices
+        run: npm run licenses -- --rust-only
       - name: Run headless dashboard checks
         run: npm test
       - name: Run headless camera checks
@@ -99,6 +128,20 @@ jobs:
           $installer = Start-Process -FilePath $packages[0].FullName -ArgumentList "/S /D=$location" -WindowStyle Hidden -PassThru
           if (!$installer.WaitForExit(60000)) { $installer.Kill(); throw 'Installer timed out.' }
           if ($installer.ExitCode -ne 0) { throw "Installer exited with $($installer.ExitCode)." }
+          $notices = @{
+            'LICENSE.txt' = 'LICENSE'
+            'THIRD-PARTY.txt' = 'src-tauri/generated-licenses/THIRD-PARTY.txt'
+            'RUST-STD.html' = 'src-tauri/generated-licenses/RUST-STD.html'
+          }
+          foreach ($notice in Get-ChildItem -LiteralPath 'src-tauri/attributions/windows' -File) {
+            $notices["windows/$($notice.Name)"] = $notice.FullName
+          }
+          foreach ($notice in $notices.GetEnumerator()) {
+            $installed = Join-Path $location "licenses/$($notice.Key)"
+            if ((Get-FileHash -LiteralPath $installed).Hash -ne (Get-FileHash -LiteralPath $notice.Value).Hash) {
+              throw "License notice differs after installation: $($notice.Key)"
+            }
+          }
           $app = Start-Process -FilePath (Join-Path $location 'camera-inspector.exe') -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
           if (!$app.WaitForExit(30000)) { $app.Kill(); throw 'Desktop app did not load.' }
           if ($app.ExitCode -ne 0) { throw "Desktop app exited with $($app.ExitCode)." }
@@ -116,6 +159,10 @@ jobs:
           trap 'hdiutil detach "$volume"' EXIT
           app="$volume/Camera Inspector.app"
           codesign --verify --deep --strict "$app"
+          notices="$app/Contents/Resources/licenses"
+          cmp LICENSE "$notices/LICENSE.txt"
+          cmp src-tauri/generated-licenses/THIRD-PARTY.txt "$notices/THIRD-PARTY.txt"
+          cmp src-tauri/generated-licenses/RUST-STD.html "$notices/RUST-STD.html"
           plutil -extract NSCameraUsageDescription raw "$app/Contents/Info.plist"
           plutil -extract NSLocalNetworkUsageDescription raw "$app/Contents/Info.plist"
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then

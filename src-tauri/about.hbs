@@ -1,0 +1,18 @@
+
+Camera Inspector third-party Rust dependencies
+
+The following notices cover the locked Windows x64, Apple Silicon, and Intel
+macOS builds. The Rust standard library and Windows installer components have
+separate notices in this directory.
+
+{{#each licenses}}
+===============================================================================
+{{name}} ({{id}})
+
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} — {{crate.repository}}{{/if}}
+{{/each}}
+
+{{{text}}}
+
+{{/each}}
